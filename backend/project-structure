@@ -1,0 +1,21 @@
+backend/
+├── app/
+│   ├── __init__.py
+│   ├── core/
+│   │   └── __init__.py
+│   ├── api/
+│   │   ├── __init__.py
+│   │   └── v1/
+│   │       ├── __init__.py
+│   │       └── endpoints/
+│   │           ├── __init__.py
+│   │           ├── health.py
+│   │           └── users.py
+│   ├── services/
+│   │   └── __init__.py
+│   ├── repositories/
+│   │   └── __init__.py
+│   └── utils/
+│       └── __init__.py
+├── main.py
+└── requirements.txt 
