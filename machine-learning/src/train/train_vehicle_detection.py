@@ -20,7 +20,7 @@ def get_model_path(model_name):
     
     # Check in models/pre-trained directory
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    model_path = os.path.join(base_dir, 'models', 'pre-trained', model_name)
+    model_path = os.path.join('src', base_dir, 'models', 'pre-trained', model_name)
     
     if os.path.isfile(model_path):
         return model_path

@@ -13,7 +13,7 @@ machine-learning/
     ├── data-prep/        # Data preparation scripts
     ├── models/           # Model management
     │   ├── pre-trained/  # Pre-trained base models
-    │   ├── fine-tuned/   # Best performing trained models
+    │   ├── fine-tuned/   # Best performing trained models - manually moved to production
     │   └── experiments/  # Training experiments and results
     └── train/           # Training implementation
 ```
@@ -72,7 +72,7 @@ python src/train.py \
     --batch-size 64 \
     --learning-rate 0.001 \
     --project-dir src/models/experiments \
-    --project-name "computer-vision-license-plate-detection"
+    --project-name "computer-vision-license-plate"
 ```
 
 4. Monitor training:
@@ -156,4 +156,56 @@ Core requirements:
 - numpy: Numerical operations
 
 See `requirements.txt` for complete list.
+
+# Machine Learning
+
+This directory contains the machine learning components for training and evaluating vehicle detection models.
+
+## Data Setup
+
+### 1. Download Dataset
+
+You can obtain the training data from:
+- [Roboflow Universe](https://universe.roboflow.com/) (recommended)
+- Any other dataset compatible with YOLO format
+
+For Roboflow:
+1. Create an account at [Roboflow](https://roboflow.com)
+2. Find or create a vehicle detection dataset
+3. Export the dataset in YOLOv8 format
+4. Download and extract to `src/data/your-dataset-name/`
+
+### 2. Configure data.yaml
+
+After downloading the dataset, update the `data.yaml` file in your dataset directory:
+
+```yaml
+# src/data/your-dataset-name/data.yaml
+
+train: path/to/your/train/images  # Path to training images
+val: path/to/your/valid/images    # Path to validation images
+test: path/to/your/test/images    # Path to test images (optional)
+
+nc: 1  # Number of classes
+names: ['vehicle']  # Class names
+```
+
+Important notes:
+- Use absolute paths or paths relative to where you'll run training
+- Verify that the paths point to the correct image directories
+- Update `nc` and `names` according to your classes
+- The default structure expects:
+  ```
+  src/data/your-dataset-name/
+  ├── train/
+  │   ├── images/
+  │   └── labels/
+  ├── valid/
+  │   ├── images/
+  │   └── labels/
+  ├── test/
+  │   ├── images/
+  │   └── labels/
+  └── data.yaml
+  ```
 

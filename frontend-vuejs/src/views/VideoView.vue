@@ -101,7 +101,7 @@ onUnmounted(() => {
   <div class="video-view">
     <div class="header-section">
       <h1>Detection System</h1>
-      <p class="subtitle">Upload your videos and detect vehicles using advanced AI technology powered by YOLOv8</p>
+      <p class="subtitle">Upload your videos and detect vehicles using advanced AI technology powered by YOLOvX</p>
     </div>
 
     <div class="content-section">

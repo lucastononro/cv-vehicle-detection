@@ -1,21 +1,46 @@
 backend/
 ├── app/
 │   ├── __init__.py
-│   ├── core/
-│   │   └── __init__.py
-│   ├── api/
-│   │   ├── __init__.py
+│   ├── main.py
+│   ├── models/                  # ML model files
+│   │   ├── README.md
+│   │   ├── epoch50.pt
+│   │   ├── license_plate_detector.pt
+│   │   └── ...
+│   ├── core/                   # Core configuration
+│   │   ├── README.md
+│   │   └── config.py
+│   ├── api/                    # API endpoints
+│   │   ├── README.md
 │   │   └── v1/
 │   │       ├── __init__.py
 │   │       └── endpoints/
 │   │           ├── __init__.py
-│   │           ├── health.py
-│   │           └── users.py
-│   ├── services/
+│   │           ├── videos.py
+│   │           └── health.py
+│   ├── services/              # Business logic
+│   │   ├── README.md
+│   │   ├── __init__.py
+│   │   ├── inference.py
+│   │   └── models/
+│   │       ├── base_model.py
+│   │       ├── yolo_model.py
+│   │       └── model_factory.py
+│   ├── repositories/          # Data access layer
+│   │   ├── README.md
+│   │   ├── __init__.py
+│   │   └── s3.py
+│   ├── schemas/              # Data validation models
+│   │   ├── README.md
+│   │   └── video.py
+│   ├── utils/               # Helper functions
+│   │   ├── README.md
 │   │   └── __init__.py
-│   ├── repositories/
-│   │   └── __init__.py
-│   └── utils/
-│       └── __init__.py
-├── main.py
-└── requirements.txt 
+│   └── static/             # Static files
+│       ├── README.md
+│       ├── thumbnails/
+│       └── temp/
+├── README.md
+├── requirements.txt        # Python dependencies
+├── Dockerfile             # Container configuration
+└── main.py               # Application entry point 
