@@ -161,8 +161,14 @@ async def list_videos():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/inference/{video_name}/stream")
-async def stream_inference(video_name: str, request: Request, background_tasks: BackgroundTasks, model_name: Optional[str] = None):
-    """Stream video with real-time inference"""
+async def stream_inference(
+    video_name: str, 
+    request: Request, 
+    background_tasks: BackgroundTasks, 
+    model_name: Optional[str] = None,
+    use_ocr: bool = True
+):
+    """Stream video with real-time inference and OCR (enabled by default)"""
     try:
         with tempfile.NamedTemporaryFile(suffix=os.path.splitext(video_name)[1], delete=False) as temp_video:
             # Download video from S3
@@ -184,8 +190,9 @@ async def stream_inference(video_name: str, request: Request, background_tasks: 
                             if not ret:
                                 break
                                 
-                            # Process frame with YOLO with annotations enabled
-                            result = inference_service.process_image(frame, model_name)
+                            # Process frame with model and OCR if enabled
+                            # Always draw annotations (bounding boxes) regardless of OCR setting
+                            result = inference_service.process_image(frame, model_name, use_ocr=use_ocr)
                             
                             # Get the processed frame with annotations
                             processed_frame = result.get('processed_frame', frame)

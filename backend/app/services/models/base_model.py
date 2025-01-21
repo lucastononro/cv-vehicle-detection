@@ -28,4 +28,8 @@ class BaseModel(ABC):
     @abstractmethod
     def model_name(self) -> str:
         """Return the name of the model"""
-        pass 
+        pass
+    
+    def read_text_from_region(self, image: np.ndarray, bbox: List[float]) -> Tuple[Optional[str], Optional[float]]:
+        """Read text from a specific region of the image. Default implementation returns None."""
+        return None, None 

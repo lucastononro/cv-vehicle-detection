@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .endpoints import health, users, videos
+from .endpoints import health, videos
 
 v1_router = APIRouter(prefix="/v1")
 

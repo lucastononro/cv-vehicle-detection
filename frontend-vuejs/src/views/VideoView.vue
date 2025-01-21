@@ -13,6 +13,7 @@ const inferenceVideoRef = ref<HTMLImageElement | null>(null);
 const inferenceUrl = ref<string>('');
 const availableModels = ref<string[]>([]);
 const selectedModel = ref<string>('yolo11n.pt');
+const useOcr = ref(true);
 
 const loadAvailableModels = async () => {
   try {
@@ -77,7 +78,7 @@ const startInference = async () => {
     }
     
     console.log('Starting inference stream...');
-    inferenceUrl.value = videoService.getVideoInferenceStreamUrl(videoName, selectedModel.value);
+    inferenceUrl.value = `${videoService.getVideoInferenceStreamUrl(videoName, selectedModel.value)}&use_ocr=${useOcr.value}`;
     console.log('Setting stream source to:', inferenceUrl.value);
     
   } catch (error) {
@@ -165,6 +166,18 @@ onUnmounted(() => {
                   {{ model }}
                 </option>
               </select>
+            </div>
+            
+            <div class="ocr-toggle">
+              <label class="toggle-label">
+                <input
+                  type="checkbox"
+                  v-model="useOcr"
+                  :disabled="isProcessing"
+                />
+                <span class="toggle-text">Enable OCR</span>
+              </label>
+              <span class="toggle-description">Detect and read license plate text</span>
             </div>
           </div>
           <button 
@@ -356,6 +369,67 @@ h1 {
 .model-dropdown:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.ocr-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.toggle-label input[type="checkbox"] {
+  appearance: none;
+  width: 3rem;
+  height: 1.5rem;
+  background-color: var(--border-color);
+  border-radius: 1rem;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.toggle-label input[type="checkbox"]:checked {
+  background-color: var(--primary-color);
+}
+
+.toggle-label input[type="checkbox"]::before {
+  content: '';
+  position: absolute;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background-color: white;
+  top: 0.125rem;
+  left: 0.125rem;
+  transition: transform 0.3s;
+}
+
+.toggle-label input[type="checkbox"]:checked::before {
+  transform: translateX(1.5rem);
+}
+
+.toggle-label input[type="checkbox"]:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.toggle-text {
+  font-size: 1rem;
+  color: var(--text-primary);
+  user-select: none;
+}
+
+.toggle-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
 }
 
 .process-button {

@@ -50,7 +50,7 @@ class YOLOModel(BaseModel):
             raise
     
     def predict(self, image: Union[np.ndarray, List[np.ndarray]], batch_size: int = 1, stream: bool = False, 
-               draw_annotations: bool = False) -> Union[List[Dict], Tuple[List[Dict], List[np.ndarray]]]:
+               draw_annotations: bool = False) -> Tuple[List[Dict], List[np.ndarray]]:
         """Process a single image or batch of images and return detections"""
         # Convert single image to list if needed
         if isinstance(image, np.ndarray):
@@ -66,12 +66,14 @@ class YOLOModel(BaseModel):
         
         for idx, result in enumerate(results):
             frame_detections = []
+            # Create a copy of the original image for annotations
+            processed_frame = images_to_process[idx].copy()
+            
             if result.boxes:  # Check if there are any detections
                 boxes = result.boxes.data.cpu().numpy()
                 
                 # Draw annotations if requested
                 if draw_annotations:
-                    img = images_to_process[idx].copy()
                     class_counts = {}  # Counter for each class
                     
                     # First pass: count objects
@@ -83,7 +85,7 @@ class YOLOModel(BaseModel):
                     # Draw total count and class counts
                     y_offset = 60  # Start higher
                     total_objects = sum(class_counts.values())
-                    self.draw_text_with_background(img, f"Total Objects: {total_objects}", (20, y_offset), 
+                    self.draw_text_with_background(processed_frame, f"Total Objects: {total_objects}", (20, y_offset), 
                                                  bg_color=(0, 100, 0), font_scale=2.0,
                                                  text_color=(255, 255, 255))
                     y_offset += 60
@@ -91,7 +93,7 @@ class YOLOModel(BaseModel):
                     # Draw individual class counts
                     for class_name, count in sorted(class_counts.items()):
                         counter_text = f"{class_name}: {count}"
-                        self.draw_text_with_background(img, counter_text, (20, y_offset), 
+                        self.draw_text_with_background(processed_frame, counter_text, (20, y_offset), 
                                                      bg_color=(0, 100, 0), font_scale=2.0,
                                                      text_color=(255, 255, 255))
                         y_offset += 60
@@ -104,17 +106,14 @@ class YOLOModel(BaseModel):
                         bbox = box[:4].astype(int)
                         
                         # Draw thicker bounding box
-                        cv2.rectangle(img, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 4)
+                        cv2.rectangle(processed_frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 4)
                         
                         # Draw label with background
                         label = f"{class_name} ({confidence:.2f})"
-                        self.draw_text_with_background(img, label, (bbox[0], bbox[1] - 30), 
+                        self.draw_text_with_background(processed_frame, label, (bbox[0], bbox[1] - 30), 
                                                      bg_color=(0, 100, 0), font_scale=1.5)
-                    
-                    processed_images.append(img)
-                else:
-                    processed_images.append(images_to_process[idx].copy())
                 
+                # Add detections to the list
                 for box in boxes:
                     class_id = int(box[5])
                     frame_detections.append({
@@ -123,17 +122,11 @@ class YOLOModel(BaseModel):
                         "class_id": class_id,
                         "class_name": self._class_names[class_id]
                     })
-            else:
-                # No detections, add empty list and original image
-                frame_detections = []
-                if draw_annotations:
-                    processed_images.append(images_to_process[idx].copy())
             
             all_detections.append(frame_detections)
+            processed_images.append(processed_frame)
         
-        if draw_annotations:
-            return all_detections, processed_images
-        return all_detections
+        return all_detections, processed_images
     
     def predict_video_stream(self, frame: np.ndarray, draw_annotations: bool = True) -> Tuple[List[Dict], Optional[np.ndarray]]:
         """Process a single frame from video stream with annotations"""
