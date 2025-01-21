@@ -50,11 +50,14 @@ var/
 pgdata/
 pgadmin/
 
-prototyping/venv/*
+*/venv/*
+venv/*
 prototyping/data/*
 prototyping/wandb/*
 runs/*
+*/experiments/*
 
 machine-learning/src/runs/*
 machine-learning/wandb/*
 machine-learning/src/data/*
+machine-learning/src/models/*
