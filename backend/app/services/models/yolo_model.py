@@ -40,24 +40,29 @@ class YOLOModel(BaseModel):
         if not model_path.exists():
             raise FileNotFoundError(f"Model not found at {model_path}")
         
-        self.model = YOLO(str(model_path))
-        self._class_names = self.model.names
-        print(f"Loaded {model_name} with classes:", self._class_names)
+        try:
+            print(f"Loading YOLO model {model_name} from {model_path}")
+            self.model = YOLO(str(model_path))
+            self._class_names = self.model.names
+            print(f"Loaded {model_name} with classes:", self._class_names)
+        except Exception as e:
+            print(f"Error loading YOLO model: {str(e)}")
+            raise
     
     def predict(self, image: Union[np.ndarray, List[np.ndarray]], batch_size: int = 1, stream: bool = False, 
-               draw_annotations: bool = False) -> List[Dict]:
+               draw_annotations: bool = False) -> Union[List[Dict], Tuple[List[Dict], List[np.ndarray]]]:
         """Process a single image or batch of images and return detections"""
-        # Convert list of images to batch if needed
-        if isinstance(image, list):
-            # If we have a list of images, process them as a batch
-            results = self.model(image, stream=stream, batch=batch_size)
-            images_to_process = image
-        else:
-            # If we have a single image, process it
-            results = self.model(image, stream=stream)
+        # Convert single image to list if needed
+        if isinstance(image, np.ndarray):
             images_to_process = [image]
+        else:
+            images_to_process = image
+
+        # Process images as a batch
+        results = self.model(images_to_process, stream=stream, batch=batch_size)
         
         all_detections = []
+        processed_images = []
         
         for idx, result in enumerate(results):
             frame_detections = []
@@ -106,7 +111,9 @@ class YOLOModel(BaseModel):
                         self.draw_text_with_background(img, label, (bbox[0], bbox[1] - 30), 
                                                      bg_color=(0, 100, 0), font_scale=1.5)
                     
-                    images_to_process[idx] = img
+                    processed_images.append(img)
+                else:
+                    processed_images.append(images_to_process[idx].copy())
                 
                 for box in boxes:
                     class_id = int(box[5])
@@ -116,17 +123,23 @@ class YOLOModel(BaseModel):
                         "class_id": class_id,
                         "class_name": self._class_names[class_id]
                     })
+            else:
+                # No detections, add empty list and original image
+                frame_detections = []
+                if draw_annotations:
+                    processed_images.append(images_to_process[idx].copy())
+            
             all_detections.append(frame_detections)
         
         if draw_annotations:
-            return all_detections[0] if isinstance(image, np.ndarray) else all_detections, images_to_process
-        return all_detections[0] if isinstance(image, np.ndarray) else all_detections
+            return all_detections, processed_images
+        return all_detections
     
     def predict_video_stream(self, frame: np.ndarray, draw_annotations: bool = True) -> Tuple[List[Dict], Optional[np.ndarray]]:
         """Process a single frame from video stream with annotations"""
         if draw_annotations:
             detections, processed_frames = self.predict([frame], batch_size=1, stream=False, draw_annotations=True)
-            return detections[0], processed_frames[0]
+            return detections[0], processed_frames[0] if processed_frames else None
         else:
             detections = self.predict([frame], batch_size=1, stream=False, draw_annotations=False)
             return detections[0], None
@@ -134,7 +147,7 @@ class YOLOModel(BaseModel):
     def process_video_batch(self, frames: List[np.ndarray], batch_size: int = 16) -> Tuple[List[Dict], List[np.ndarray]]:
         """Process a batch of video frames with optimized batch inference"""
         detections, processed_frames = self.predict(frames, batch_size=batch_size, stream=True, draw_annotations=True)
-        return detections, processed_frames
+        return detections, processed_frames if processed_frames else frames
 
     def predict_video(self, video_path: str, batch_size: int = 16, save_path: Optional[str] = None) -> List[Dict]:
         """Process video in batches for better GPU utilization"""

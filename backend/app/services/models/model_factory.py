@@ -19,13 +19,21 @@ class ModelFactory:
         if model_type not in self._model_classes:
             raise ValueError(f"Unknown model type: {model_type}")
         
+        # If model is already loaded, return it
         if model_name in self._models:
+            print(f"Model {model_name} already loaded")
             return self._models[model_name]
         
-        model_class = self._model_classes[model_type]
-        model = model_class(model_path, model_name)
-        self._models[model_name] = model
-        return model
+        try:
+            print(f"Loading model {model_name} of type {model_type} from {model_path}")
+            model_class = self._model_classes[model_type]
+            model = model_class(model_path, model_name)
+            self._models[model_name] = model
+            print(f"Successfully loaded model {model_name}")
+            return model
+        except Exception as e:
+            print(f"Error loading model {model_name}: {str(e)}")
+            raise
     
     def get_model(self, model_name: str) -> BaseModel:
         """Get a loaded model by name"""

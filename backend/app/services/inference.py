@@ -7,41 +7,51 @@ import os
 from pathlib import Path
 import numpy as np
 from .models.model_factory import ModelFactory
+from .models.base_model import BaseModel
 
 class InferenceService:
     def __init__(self):
         self.model_factory = ModelFactory()
+        self.models_dir = Path("/app/app/models")
         # Load default YOLO model
-        model_paths = [
-            Path("/app/app/models/yolo11n.pt"),  # Docker path
-            Path("models/yolo11n.pt"),          # Local path
-            Path("app/models/yolo11n.pt"),      # Alternative path
-            Path("../models/yolo11n.pt"),       # Relative path
-        ]
+        model_path = self.models_dir / "yolo11n.pt"  # Docker path
         
-        model_loaded = False
-        for model_path in model_paths:
-            try:
-                if model_path.exists():
-                    self.default_model = self.model_factory.load_model('yolo', str(model_path), 'yolo11n')
-                    print(f"Successfully loaded model from {model_path}")
-                    model_loaded = True
-                    break
-            except Exception as e:
-                print(f"Failed to load model from {model_path}: {str(e)}")
-                continue
-        
-        if not model_loaded:
-            raise FileNotFoundError(f"Model not found in any of the following locations: {[str(p) for p in model_paths]}")
+        try:
+            print(f"Loading model from {model_path}")
+            if model_path.exists():
+                self.default_model = self.model_factory.load_model('yolo', str(model_path), 'yolo11n')
+                print(f"Successfully loaded model from {model_path}")
+            else:
+                raise FileNotFoundError(f"Model not found at {model_path}")
+        except Exception as e:
+            print(f"Failed to load model: {str(e)}")
+            raise FileNotFoundError(f"Could not load model from {model_path}: {str(e)}")
+    
+    def get_model(self, model_name: Optional[str] = None) -> BaseModel:
+        """Get a model by name, loading it if necessary"""
+        if not model_name:
+            return self.default_model
+            
+        try:
+            # Try to get already loaded model
+            return self.model_factory.get_model(model_name)
+        except ValueError:
+            # Model not loaded, try to load it
+            model_path = self.models_dir / model_name
+            if not model_path.exists():
+                raise FileNotFoundError(f"Model not found at {model_path}")
+            
+            return self.model_factory.load_model('yolo', str(model_path), model_name)
     
     def process_image(self, image_array: np.ndarray, model_name: Optional[str] = None) -> Dict:
         """Process a single image and return detections"""
-        model = self.model_factory.get_model(model_name) if model_name else self.default_model
-        detections = model.predict(image_array)
+        model = self.get_model(model_name)
+        detections, processed_frame = model.predict([image_array], batch_size=1, stream=False, draw_annotations=True)
         
         return {
             "model_name": model.model_name,
-            "detections": detections
+            "detections": detections[0],
+            "processed_frame": processed_frame[0] if processed_frame else image_array
         }
     
     def process_video_batch(self, frames: List[np.ndarray], batch_size: int = 16) -> Tuple[List[Dict], List[np.ndarray]]:
@@ -50,7 +60,7 @@ class InferenceService:
     
     async def process_video_file(self, video_path: str, output_path: str, model_name: Optional[str] = None) -> str:
         """Process entire video file and save results"""
-        model = self.model_factory.get_model(model_name) if model_name else self.default_model
+        model = self.get_model(model_name)
         # For now, we'll use the YOLO save functionality only with YOLO models
         if isinstance(model, self.model_factory._model_classes['yolo']):
             results = model.model(video_path, save=True)
@@ -60,7 +70,7 @@ class InferenceService:
     
     async def process_video_stream(self, video_path: str, model_name: Optional[str] = None, batch_size: int = 4) -> AsyncGenerator[str, None]:
         """Process video in batches and yield results in real-time"""
-        model = self.model_factory.get_model(model_name) if model_name else self.default_model
+        model = self.get_model(model_name)
         cap = cv2.VideoCapture(video_path)
         frames = []
         frame_indices = []
@@ -118,4 +128,12 @@ class InferenceService:
     
     def list_available_models(self) -> Dict[str, Dict]:
         """List all available models and their configurations"""
-        return self.model_factory.list_models() 
+        return self.model_factory.list_models()
+
+    def get_available_models(self) -> List[str]:
+        """List all available .pt model files in the models directory"""
+        try:
+            return [f.name for f in self.models_dir.glob("*.pt")]
+        except Exception as e:
+            print(f"Error listing models: {str(e)}")
+            return [] 

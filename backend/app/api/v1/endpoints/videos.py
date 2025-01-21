@@ -161,7 +161,7 @@ async def list_videos():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/inference/{video_name}/stream")
-async def stream_inference(video_name: str, request: Request, background_tasks: BackgroundTasks):
+async def stream_inference(video_name: str, request: Request, background_tasks: BackgroundTasks, model_name: Optional[str] = None):
     """Stream video with real-time inference"""
     try:
         with tempfile.NamedTemporaryFile(suffix=os.path.splitext(video_name)[1], delete=False) as temp_video:
@@ -185,7 +185,10 @@ async def stream_inference(video_name: str, request: Request, background_tasks: 
                                 break
                                 
                             # Process frame with YOLO with annotations enabled
-                            results, processed_frame = inference_service.default_model.predict_video_stream(frame)
+                            result = inference_service.process_image(frame, model_name)
+                            
+                            # Get the processed frame with annotations
+                            processed_frame = result.get('processed_frame', frame)
                             
                             # Encode frame to JPEG
                             _, buffer = cv2.imencode('.jpg', processed_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
@@ -224,6 +227,11 @@ async def stream_inference(video_name: str, request: Request, background_tasks: 
     except Exception as e:
         print(f"Error in stream_inference: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/models", response_model=List[str])
+async def get_available_models():
+    """Get list of available model files"""
+    return inference_service.get_available_models()
 
 @router.post("/inference/{video_name}/save", response_model=VideoInferenceResponse)
 async def save_inference(video_name: str):

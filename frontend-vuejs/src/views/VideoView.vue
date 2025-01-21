@@ -11,6 +11,19 @@ const showInference = ref(false);
 const originalVideoRef = ref<HTMLVideoElement | null>(null);
 const inferenceVideoRef = ref<HTMLImageElement | null>(null);
 const inferenceUrl = ref<string>('');
+const availableModels = ref<string[]>([]);
+const selectedModel = ref<string>('yolo11n.pt');
+
+const loadAvailableModels = async () => {
+  try {
+    availableModels.value = await videoService.getAvailableModels();
+    if (availableModels.value.length > 0) {
+      selectedModel.value = availableModels.value[0];
+    }
+  } catch (error) {
+    console.error('Error loading models:', error);
+  }
+};
 
 const handleInferenceError = () => {
   console.error('Error loading inference stream');
@@ -64,7 +77,7 @@ const startInference = async () => {
     }
     
     console.log('Starting inference stream...');
-    inferenceUrl.value = videoService.getVideoInferenceStreamUrl(videoName);
+    inferenceUrl.value = videoService.getVideoInferenceStreamUrl(videoName, selectedModel.value);
     console.log('Setting stream source to:', inferenceUrl.value);
     
   } catch (error) {
@@ -73,8 +86,9 @@ const startInference = async () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   document.addEventListener('visibilitychange', handleVisibilityChange);
+  await loadAvailableModels();
 });
 
 onUnmounted(() => {
@@ -128,9 +142,31 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
+        <div class="video-name">
+            <h2>{{ decodeURIComponent(videoName) }}</h2>
+        </div>
+        
         
         <div class="video-actions">
-          <h2>{{ decodeURIComponent(videoName) }}</h2>
+          <div class="video-info">
+            <div class="model-selection">
+              <label for="model-select">Select Detection Model:</label>
+              <select 
+                id="model-select" 
+                v-model="selectedModel"
+                :disabled="isProcessing"
+                class="model-dropdown"
+              >
+                <option 
+                  v-for="model in availableModels" 
+                  :key="model" 
+                  :value="model"
+                >
+                  {{ model }}
+                </option>
+              </select>
+            </div>
+          </div>
           <button 
             class="process-button"
             :disabled="isProcessing"
@@ -253,23 +289,77 @@ h1 {
   object-fit: contain;
 }
 
-.video-actions {
-  padding: 2rem;
+.video-name {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 2rem;
-  border-top: 1px solid var(--border-color);
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0 2rem;
+  margin-top: 1rem;
 }
 
-.video-actions h2 {
-  font-size: 1.5rem;
+.video-name h2 {
+  font-size: 1.2rem;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
 }
 
+.video-actions {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.video-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.video-info h2 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.model-selection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.model-selection label {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.model-dropdown {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  cursor: pointer;
+  min-width: 200px;
+  transition: all 0.2s;
+}
+
+.model-dropdown:hover:not(:disabled) {
+  border-color: var(--primary-color);
+}
+
+.model-dropdown:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .process-button {
+  align-self: flex-end;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -347,13 +437,24 @@ h1 {
   }
 
   .video-actions {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
+    padding: 1.5rem;
   }
 
-  .video-actions h2 {
-    font-size: 1.25rem;
+  .process-button {
+    align-self: stretch;
+  }
+
+  .video-info {
+    margin-right: 0;
+    gap: 0.75rem;
+  }
+
+  .video-name {
+    padding: 0 1.5rem;
+  }
+
+  .model-selection {
+    min-width: unset;
   }
 }
 </style> 

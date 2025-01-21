@@ -42,8 +42,14 @@ export const videoService = {
     return `${API_URL}/videos/stream/${encodeURIComponent(videoName)}`;
   },
 
-  getVideoInferenceStreamUrl(videoName: string) {
-    const url = `${API_URL}/videos/inference/${encodeURIComponent(videoName)}/stream`;
+  async getAvailableModels(): Promise<string[]> {
+    const response = await api.get('/videos/models');
+    return response.data;
+  },
+
+  getVideoInferenceStreamUrl(videoName: string, modelName?: string) {
+    const baseUrl = `${API_URL}/videos/inference/${encodeURIComponent(videoName)}/stream`;
+    const url = modelName ? `${baseUrl}?model_name=${encodeURIComponent(modelName)}` : baseUrl;
     console.log('Generated inference URL:', url);
     return url;
   }
