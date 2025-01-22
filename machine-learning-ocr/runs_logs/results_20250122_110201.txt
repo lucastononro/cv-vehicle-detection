@@ -1,0 +1,23 @@
+Results Summary:
+==================================================
+
+
+EasyOCR:
+Accuracy: 0.00%
+Correct: 0/13
+
+Detailed Results:
+   Ground Truth   EasyOCR
+0       EWU4H33    EHGH3S
+1       ISB6348          
+2       FWS9B78   FASOD-8
+3       IPR5A10   IPRSA1O
+4       ISB6J48        IS
+5       IMU1C50  IN MICSO
+6       ASF9648     USF S
+7       FWN5J43        FS
+8       GHH278D          
+9       PHE7F79   {FE?F D
+10      FOM3E02     FOHJE
+11      FQX1741          
+12      EPQ1B40  CPO 4840

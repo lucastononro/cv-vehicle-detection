@@ -1,0 +1,31 @@
+Results Summary:
+==================================================
+
+
+EasyOCR:
+Accuracy: 0.00%
+Correct: 0/13
+
+TrOCR:
+Accuracy: 0.00%
+Correct: 0/13
+
+Tesseract:
+Accuracy: 0.00%
+Correct: 0/13
+
+Detailed Results:
+   Ground Truth  EasyOCR   TrOCR Tesseract
+0       EWU4H33   EHGH3S  EW4433  PEWUGHSS
+1       ISB6348           L94426        PA
+2       FWS9B78  FASOD-8  F49078          
+3       IPR5A10  IPR5410  8195AQ         L
+4       ISB6J48       IS  8353BQ         P
+5       IMU1C50  INM1C50  KU1050         E
+6       ASF9648    USF S  AS9449          
+7       FWN5J43       FS  FW5143        SE
+8       GHH278D           Y91485          
+9       PHE7F79  {FE?F D  JQ2629         B
+10      FOM3E02    FOHJE  JH3302          
+11      FQX1741           8147ZZ          
+12      EPQ1B40  CPO4840  EP1340       H24

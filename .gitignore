@@ -66,3 +66,5 @@ machine-learning-yolo/src/runs/*
 machine-learning-yolo/wandb/*
 machine-learning-yolo/src/data/*
 machine-learning-yolo/src/models/*
+
+yolo-env/*

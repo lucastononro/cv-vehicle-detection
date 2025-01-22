@@ -1,0 +1,35 @@
+Results Summary:
+==================================================
+
+
+EasyOCR:
+Accuracy: 0.00%
+Correct: 0/13
+
+TrOCR Fine-Tuned:
+Accuracy: 0.00%
+Correct: 0/13
+
+TrOCR Raw Large:
+Accuracy: 7.69%
+Correct: 1/13
+
+Tesseract:
+Accuracy: 0.00%
+Correct: 0/13
+
+Detailed Results:
+   Ground Truth  EasyOCR TrOCR Fine-Tuned TrOCR Raw Large Tesseract
+0       EWU4H33   EHGH3S           EW4433         EMU4H33  PEWUGHSS
+1       ISB6348                    L94426            8.58        PA
+2       FWS9B78  FASOD-8           F49078         FWS9078          
+3       IPR5A10  IPR5410           8195AQ          TRAXIA         L
+4       ISB6J48       IS           8353BQ            6388         P
+5       IMU1C50  INM1C50           KU1050         IMU1C50         E
+6       ASF9648    USF S           AS9449         CASHIER          
+7       FWN5J43       FS           FW5143        (RM5043)        SE
+8       GHH278D                    Y91485            2.98          
+9       PHE7F79  {FE?F D           JQ2629        PREVE 99         B
+10      FOM3E02    FOHJE           JH3302         FOH3E02          
+11      FQX1741                    8147ZZ             BEE          
+12      EPQ1B40  CPO4840           EP1340         EPO1840       H24
