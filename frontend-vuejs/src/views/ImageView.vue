@@ -41,7 +41,41 @@
         
         <div class="image-actions">
           <div class="image-info">
-            <div class="model-selection">
+            <!-- Pipeline Mode Toggle -->
+            <div class="pipeline-toggle">
+              <label class="toggle-label">
+                <input
+                  type="checkbox"
+                  v-model="isPipelineMode"
+                  :disabled="isProcessing"
+                />
+                <span class="toggle-text">Pipeline Mode</span>
+                <span class="toggle-description">
+                  {{ isPipelineMode ? 'Configure Detection Pipeline' : 'Select Single Model' }}
+                </span>
+              </label>
+            </div>
+
+            <!-- Pipeline Configuration (shown in pipeline mode) -->
+            <div v-if="isPipelineMode" class="pipeline-config">
+              <h4>Detection Pipeline</h4>
+              <div class="pipeline-steps">
+                <div v-for="(step, index) in pipelineSteps" :key="index" class="pipeline-step">
+                  <label class="toggle-label">
+                    <input
+                      type="checkbox"
+                      v-model="step.enabled"
+                      :disabled="isProcessing || (index === 0 && step.enabled)"
+                    />
+                    <span class="toggle-text">{{ step.model }}</span>
+                  </label>
+                  <div class="step-arrow" v-if="index < pipelineSteps.length - 1">→</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Model Selection (only shown in single model mode) -->
+            <div v-if="showModelSelection" class="model-selection">
               <label for="model-select">Select Detection Model:</label>
               <select 
                 id="model-select" 
@@ -59,6 +93,7 @@
               </select>
             </div>
             
+            <!-- OCR Toggle -->
             <div class="ocr-toggle">
               <label class="toggle-label">
                 <input
@@ -67,7 +102,7 @@
                   :disabled="isProcessing"
                 />
                 <span class="toggle-text">Enable OCR</span>
-                <span class="toggle-description">Detect and read license plate text</span>
+                <span class="toggle-description">Extract text from license plates</span>
               </label>
             </div>
           </div>
@@ -87,10 +122,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { imageService } from '@/services/api';
-import type { Detection } from '@/services/api';
+import { imageService, type PipelineStep } from '@/services/api';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 
 const route = useRoute();
@@ -100,9 +134,18 @@ const detections = ref<Detection[]>([]);
 const isProcessing = ref<boolean>(false);
 const showInference = ref<boolean>(false);
 const availableModels = ref<string[]>([]);
-const selectedModel = ref<string>('yolo11n.pt');
+const selectedModel = ref<string>('yolo11n');
 const useOcr = ref<boolean>(true);
-const API_URL = 'http://localhost:8000/api/v1';
+const isPipelineMode = ref<boolean>(false);
+const isLoading = ref(false);
+
+const pipelineSteps = ref<PipelineStep[]>([
+  { model: 'yolo11n', enabled: true },
+  { model: 'license_plate_detector', enabled: true },
+  { model: 'easyocr', enabled: true }
+]);
+
+const showModelSelection = computed(() => !isPipelineMode.value);
 
 const loadAvailableModels = async () => {
   try {
@@ -122,11 +165,17 @@ const startInference = async () => {
     isProcessing.value = true;
     showInference.value = true;
     
-    const result = await imageService.processImage(
-      imageName,
-      useOcr.value,
-      selectedModel.value
-    );
+    const result = isPipelineMode.value
+      ? await imageService.processPipeline(
+          imageName,
+          pipelineSteps.value,
+          useOcr.value
+        )
+      : await imageService.processImage(
+          imageName,
+          selectedModel.value,
+          useOcr.value
+        );
     
     processedImage.value = result.processed_image;
     detections.value = result.detections;
@@ -379,5 +428,114 @@ onMounted(async () => {
 
 .loading-overlay .fa-spin {
   font-size: 2rem;
+}
+
+.pipeline-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.toggle-label input[type="checkbox"] {
+  appearance: none;
+  width: 3rem;
+  height: 1.5rem;
+  background-color: var(--border-color);
+  border-radius: 1rem;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.toggle-label input[type="checkbox"]:checked {
+  background-color: var(--primary-color);
+}
+
+.toggle-label input[type="checkbox"]::before {
+  content: '';
+  position: absolute;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background-color: white;
+  top: 0.125rem;
+  left: 0.125rem;
+  transition: transform 0.3s;
+}
+
+.toggle-label input[type="checkbox"]:checked::before {
+  transform: translateX(1.5rem);
+}
+
+.toggle-label input[type="checkbox"]:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.toggle-text {
+  font-size: 1rem;
+  color: var(--text-primary);
+  user-select: none;
+}
+
+.toggle-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.pipeline-config {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--background-color);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.pipeline-config h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.pipeline-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pipeline-step {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.step-arrow {
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  margin: 0 0.5rem;
+}
+
+/* Update toggle-label for pipeline steps */
+.pipeline-step .toggle-label {
+  flex: 1;
+  padding: 0.5rem;
+  background: var(--surface-color);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.pipeline-step .toggle-label:hover {
+  border-color: var(--primary-color);
 }
 </style> 

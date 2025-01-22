@@ -30,6 +30,11 @@ export interface ImageInferenceResult {
   processed_image: string;
 }
 
+export interface PipelineStep {
+  model: string;
+  enabled: boolean;
+}
+
 const api = axios.create({
   baseURL: API_URL,
 });
@@ -87,6 +92,23 @@ export const imageService = {
       params: { 
         use_ocr: useOcr,
         model_name: modelName
+      }
+    });
+    return response.data;
+  },
+
+  async processPipeline(
+    imageName: string, 
+    steps: PipelineStep[],
+    useOcr: boolean = true
+  ): Promise<ImageInferenceResult> {
+    const response = await api.get(`/images/pipeline/${imageName}`, {
+      params: { 
+        use_ocr: useOcr,
+        pipeline: steps
+          .filter(step => step.enabled)
+          .map(step => step.model)
+          .join(',')
       }
     });
     return response.data;

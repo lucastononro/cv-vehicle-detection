@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from fastapi.responses import JSONResponse, Response
 import cv2
 import numpy as np
@@ -11,10 +11,12 @@ import tempfile
 from ....services.inference import InferenceService
 from ....repositories.s3 import S3Repository
 from ....schemas.image import ImageResponse, ImageUploadResponse, ImageInferenceResponse
+from ....services.pipeline import ModelPipeline
 
 router = APIRouter()
 s3_repo = S3Repository()
 inference_service = InferenceService()
+pipeline_service = ModelPipeline()
 
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp'}
 
@@ -206,4 +208,45 @@ async def get_image(image_name: str):
         return Response(content=image_bytes, media_type="image/jpeg")
         
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/pipeline/{image_name}", response_model=ImageInferenceResponse)
+async def get_pipeline_inference(
+    image_name: str,
+    use_ocr: bool = True,
+    pipeline: str = None,
+    s3_service: S3Service = Depends(get_s3_service),
+    pipeline_service: ModelPipeline = Depends(get_pipeline_service),
+):
+    """
+    Get inference results for an image using model pipeline
+    """
+    try:
+        # Get image from S3
+        image_bytes = await s3_service.get_file(image_name)
+        if not image_bytes:
+            raise HTTPException(status_code=404, detail="Image not found")
+
+        # Convert bytes to numpy array
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if image is None:
+            raise HTTPException(status_code=400, detail="Invalid image format")
+
+        # Process pipeline steps
+        pipeline_steps = pipeline.split(',') if pipeline else None
+        result = pipeline_service.process_image(image, use_ocr=use_ocr, pipeline_steps=pipeline_steps)
+        
+        # Convert processed image to base64
+        _, buffer = cv2.imencode('.jpg', result['image'])
+        processed_image = base64.b64encode(buffer).decode('utf-8')
+        processed_image = f"data:image/jpeg;base64,{processed_image}"
+
+        return {
+            "detections": result['detections'],
+            "processed_image": processed_image
+        }
+
+    except Exception as e:
+        logger.error(f"Error in pipeline inference: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e)) 
