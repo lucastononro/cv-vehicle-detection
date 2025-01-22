@@ -39,7 +39,7 @@
         <div class="image-actions">
           <div class="image-info">
             <!-- Pipeline Mode Toggle -->
-            <div class="pipeline-toggle">
+            <!-- <div class="pipeline-toggle">
               <label class="toggle-label">
                 <input
                   type="checkbox"
@@ -51,7 +51,7 @@
                   {{ isPipelineMode ? 'Configure Detection Pipeline' : 'Select Single Model' }}
                 </span>
               </label>
-            </div>
+            </div> -->
 
             <!-- Pipeline Configuration (shown in pipeline mode) -->
             <div v-if="isPipelineMode" class="pipeline-config">
