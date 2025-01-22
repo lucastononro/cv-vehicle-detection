@@ -79,6 +79,40 @@ class OCRPreprocessor:
         grad_x = 255 * ((grad_x - min_val) / (max_val - min_val))
         return grad_x.astype(np.uint8)
 
+    def denoise_image(self, image: np.ndarray) -> np.ndarray:
+        """Apply denoising to the image"""
+        # Apply non-local means denoising
+        denoised = cv2.fastNlMeansDenoising(image, None, h=10, templateWindowSize=7, searchWindowSize=21)
+        return denoised
+
+    def deskew_image(self, image: np.ndarray) -> np.ndarray:
+        """Deskew the image using moments method"""
+        # Calculate moments
+        moments = cv2.moments(image)
+        
+        if abs(moments['mu02']) < 1e-2:
+            # Return original image if skew is negligible
+            return image
+        
+        # Calculate skew angle
+        skew = moments['mu11'] / moments['mu02']
+        height, width = image.shape[:2]
+        
+        # Create transformation matrix as numpy array
+        M = np.array([[1, skew, -0.5 * height * skew],
+                     [0, 1, 0]], dtype=np.float32)
+        
+        # Apply affine transform
+        deskewed = cv2.warpAffine(
+            image, 
+            M, 
+            (width, height),
+            flags=cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_CONSTANT,
+            borderValue=[255, 255, 255]
+        )
+        return deskewed
+
     def process_gradient(self, gradient: np.ndarray) -> np.ndarray:
         """Process gradient with blur and morphological operations"""
         # Apply Gaussian blur
@@ -146,40 +180,24 @@ class OCRPreprocessor:
         gray = self.to_grayscale(image)
         gray = self.resize_image(gray, width=600)
         if verbose:
-            self.save_debug_image(gray, "01_grayscale", timestamp)        # 2. Apply blackhat operation
-        blackhat = self.apply_blackhat(gray)
+            self.save_debug_image(gray, "01_grayscale", timestamp)
+        
+        # # 2. Apply blackhat operation to enhance dark text
+        # blackhat = self.apply_blackhat(gray)
+        # if verbose:
+        #     self.save_debug_image(blackhat, "02_blackhat", timestamp)
+        
+        # 2. Apply denoising to clean up the image
+        denoised = self.denoise_image(gray)
         if verbose:
-            self.save_debug_image(blackhat, "02_blackhat", timestamp)
-        return blackhat
+            self.save_debug_image(denoised, "02_denoised", timestamp)
         
-        # # 3. Find light regions
-        # light = self.find_light_regions(gray)
-        # if verbose:
-        #     self.save_debug_image(light, "03_light_regions", timestamp)
+        # 3. Apply deskewing
+        deskewed = self.deskew_image(denoised)
+        if verbose:
+            self.save_debug_image(deskewed, "03_deskewed", timestamp)
         
-        # # 4. Compute gradient
-        # gradient = self.compute_gradient(blackhat)
-        # if verbose:
-        #     self.save_debug_image(gradient, "04_gradient", timestamp)
-        
-        # # 5. Process gradient
-        # thresh = self.process_gradient(gradient)
-        # if verbose:
-        #     self.save_debug_image(thresh, "05_thresh", timestamp)
-        
-        # # 6. Find plate region
-        # lp_roi, binary_roi = self.find_plate_region(thresh, light, gray)
-        
-        # if lp_roi is None:
-        #     return gray  # Return original grayscale if no plate found
-        
-        # if verbose:
-        #     if lp_roi is not None:
-        #         self.save_debug_image(lp_roi, "06_plate_roi", timestamp)
-        #     if binary_roi is not None:
-        #         self.save_debug_image(binary_roi, "07_binary_roi", timestamp)
-        
-        # return binary_roi if binary_roi is not None else lp_roi
+        return deskewed
 
 class OCRModel(BaseModel):
     def __init__(self, model_path: Optional[str] = None, model_name: str = "easyocr", debug_output_dir: str = "debug_output"):
