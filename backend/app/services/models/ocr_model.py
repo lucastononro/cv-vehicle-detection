@@ -5,6 +5,10 @@ from .base_model import BaseModel
 import cv2
 import os
 from datetime import datetime
+from transformers import TrOCRProcessor, VisionEncoderDecoderModel
+import torch
+from PIL import Image
+import pytesseract
 
 try:
     from skimage.segmentation import clear_border
@@ -287,4 +291,256 @@ class OCRModel(BaseModel):
 
     def process_video_batch(self, frames: List[np.ndarray], batch_size: int = 16) -> Tuple[List[Dict], List[np.ndarray]]:
         """Not meant to be used directly for OCR"""
+        return self.predict(frames, batch_size=batch_size, stream=False, draw_annotations=True)
+
+class EasyOCRWrapper:
+    """Wrapper class for EasyOCR model implementation"""
+    _reader = None  # Class-level cache for the reader
+    
+    def __init__(self, languages: List[str] = ['en']):
+        if EasyOCRWrapper._reader is None:
+            print("Initializing EasyOCR reader (first time only)...")
+            try:
+                EasyOCRWrapper._reader = easyocr.Reader(
+                    languages,
+                    gpu=False,  # Force CPU mode for stability
+                    download_enabled=False,  # Prevent automatic downloads
+                    verbose=False
+                )
+                print("EasyOCR reader initialized successfully")
+            except Exception as e:
+                print(f"Error initializing EasyOCR: {str(e)}")
+                raise
+        self.reader = EasyOCRWrapper._reader
+        
+    def extract_text(self, image: np.ndarray) -> List[Tuple[str, float]]:
+        """Extract text from image using EasyOCR"""
+        try:
+            print("Starting EasyOCR text detection...")
+            print(f"Input image shape: {image.shape}")
+            
+            # Convert image to grayscale if it's color
+            if len(image.shape) == 3:
+                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            else:
+                gray = image
+                
+            # Resize if image is too small
+            min_size = 100
+            if min(gray.shape) < min_size:
+                scale = min_size / min(gray.shape)
+                gray = cv2.resize(gray, None, fx=scale, fy=scale)
+            
+            print("Running OCR...")
+            results = self.reader.readtext(gray)
+            print(f"OCR complete. Found {len(results)} results")
+            
+            if not results:
+                print("No text detected")
+                return []
+                
+            # Extract text and confidence
+            processed_results = []
+            for result in results:
+                text = result[1].strip().upper()
+                conf = result[2]
+                if text:  # Only include non-empty text
+                    processed_results.append((text, conf))
+                    print(f"Detected: {text} (conf: {conf:.2f})")
+            
+            return processed_results
+            
+        except Exception as e:
+            print(f"Error in EasyOCR text extraction: {str(e)}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            return []
+
+class TrOCRFinetunedWrapper:
+    def __init__(self, model_path):
+        self.processor = TrOCRProcessor.from_pretrained(model_path)
+        self.model = VisionEncoderDecoderModel.from_pretrained(model_path)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model.to(self.device)
+
+    def predict(self, image):
+        if isinstance(image, np.ndarray):
+            image = Image.fromarray(image)
+        
+        pixel_values = self.processor(image, return_tensors="pt").pixel_values
+        pixel_values = pixel_values.to(self.device)
+        
+        generated_ids = self.model.generate(pixel_values)
+        generated_text = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+        
+        return generated_text
+
+class TesseractWrapper:
+    """Wrapper class for Tesseract OCR engine."""
+    
+    def __init__(self, language: str = 'eng'):
+        self.language = language
+        
+    def extract_text(self, image: np.ndarray) -> List[Tuple[str, float]]:
+        """
+        Extract text from an image using Tesseract OCR.
+        
+        Args:
+            image: numpy array of the image
+            
+        Returns:
+            List of tuples containing (text, confidence_score)
+        """
+        try:
+            print("Starting Tesseract text detection...")
+            print(f"Input image shape: {image.shape}")
+            
+            # Convert numpy array to PIL Image
+            if len(image.shape) == 3:
+                # Convert BGR to RGB for PIL
+                image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                pil_image = Image.fromarray(image_rgb)
+            else:
+                pil_image = Image.fromarray(image)
+            
+            # Get text and confidence data
+            data = pytesseract.image_to_data(pil_image, lang=self.language, output_type=pytesseract.Output.DICT)
+            
+            # Process results
+            results = []
+            for i, text in enumerate(data['text']):
+                conf = float(data['conf'][i])
+                if conf > 0 and text.strip():  # Only include non-empty text with valid confidence
+                    text = text.strip().upper()
+                    conf = conf / 100.0  # Convert confidence to 0-1 range
+                    results.append((text, conf))
+                    print(f"Detected: {text} (conf: {conf:.2f})")
+            
+            print(f"Tesseract complete. Found {len(results)} results")
+            return results
+            
+        except Exception as e:
+            print(f"Error in Tesseract text extraction: {str(e)}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            return []
+
+class TrOCRLargeWrapper:
+    def __init__(self):
+        self.processor = TrOCRProcessor.from_pretrained('microsoft/trocr-large-handwritten')
+        self.model = VisionEncoderDecoderModel.from_pretrained('microsoft/trocr-large-handwritten')
+        
+    def process_image(self, image: Image) -> str:
+        pixel_values = self.processor(image, return_tensors="pt").pixel_values
+        generated_ids = self.model.generate(pixel_values)
+        generated_text = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+        return generated_text 
+
+class OCRModelFactory:
+    def __init__(self):
+        self._model_classes = {
+            'easyocr': EasyOCRWrapper,
+            'trocr_finetuned': TrOCRFinetunedWrapper,
+            'tesseract': TesseractWrapper,
+            'trocr_large': TrOCRLargeWrapper
+        }
+        self._loaded_models = {}  # Cache for loaded models
+
+    def get_model(self, model_name: str) -> Optional[object]:
+        """Get an OCR model by name, loading it only if needed"""
+        print(f"Requesting OCR model: {model_name}")
+        
+        if model_name not in self._model_classes:
+            raise ValueError(f"OCR model '{model_name}' not found")
+            
+        # Return cached model if available
+        if model_name in self._loaded_models:
+            print(f"Using cached {model_name} model")
+            return self._loaded_models[model_name]
+            
+        # Load the requested model
+        print(f"Loading {model_name} model...")
+        if model_name == 'easyocr':
+            model = self._model_classes[model_name](['en'])
+        elif model_name == 'trocr_finetuned':
+            model = self._model_classes[model_name]('microsoft/trocr-base-printed')
+        elif model_name == 'tesseract':
+            model = self._model_classes[model_name]()
+        elif model_name == 'trocr_large':
+            model = self._model_classes[model_name]()
+        
+        # Cache the model
+        self._loaded_models[model_name] = model
+        print(f"Successfully loaded {model_name} model")
+        return model
+
+class UnifiedOCRModel(BaseModel):
+    def __init__(self, model_name: str):
+        print(f"\n=== Initializing UnifiedOCRModel ===")
+        print(f"Requested model: {model_name}")
+        self._model_name = model_name
+        try:
+            print("Creating OCR model factory...")
+            factory = OCRModelFactory()
+            print(f"Getting model {model_name} from factory...")
+            self.model = factory.get_model(model_name)
+            print("OCR model initialization complete")
+        except Exception as e:
+            print(f"Error initializing OCR model: {str(e)}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            raise
+
+    @property
+    def model_name(self) -> str:
+        return self._model_name
+
+    def get_class_names(self) -> List[str]:
+        return ["text"]
+
+    def read_text_from_region(self, image: np.ndarray, bbox: List[float], verbose: bool = False) -> Tuple[Optional[str], Optional[float]]:
+        print(f"\n=== OCR read_text_from_region ===")
+        print(f"Image shape: {image.shape}")
+        print(f"Bbox: {bbox}")
+        
+        try:
+            if hasattr(self.model, 'extract_text'):
+                print("Using extract_text method")
+                results = self.model.extract_text(image)
+                print(f"Got {len(results)} results from OCR")
+                
+                if results:
+                    # Get the result with highest confidence
+                    text, conf = max(results, key=lambda x: x[1])
+                    print(f"Best result: {text} (conf: {conf:.2f})")
+                    return text, conf
+                else:
+                    print("No text detected")
+                    return None, None
+            else:
+                print("Model does not have extract_text method")
+                return None, None
+        except Exception as e:
+            print(f"Error in read_text_from_region: {str(e)}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            return None, None
+
+    def predict(self, images: List[np.ndarray], batch_size: int = 1, stream: bool = False, draw_annotations: bool = True) -> Tuple[List[Dict], List[np.ndarray]]:
+        results = []
+        processed_frames = []
+
+        for image in images:
+            text, _ = self.read_text_from_region(image, [0, 0, image.shape[1], image.shape[0]])
+            results.append([{'text': text}])
+            processed_frames.append(image)
+
+        return results, processed_frames 
+
+    def predict_video(self, video_path: str, save: bool = False) -> None:
+        """Not implemented for UnifiedOCRModel"""
+        raise NotImplementedError("Video prediction not implemented for UnifiedOCRModel")
+
+    def process_video_batch(self, frames: List[np.ndarray], batch_size: int = 16) -> Tuple[List[Dict], List[np.ndarray]]:
+        """Not meant to be used directly for UnifiedOCRModel"""
         return self.predict(frames, batch_size=batch_size, stream=False, draw_annotations=True) 

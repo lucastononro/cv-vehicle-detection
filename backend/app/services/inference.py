@@ -8,10 +8,11 @@ from pathlib import Path
 import numpy as np
 from .models.model_factory import ModelFactory
 from .models.base_model import BaseModel
+from .models.ocr_model import EasyOCRWrapper, TrOCRFinetunedWrapper, TesseractWrapper, TrOCRLargeWrapper, UnifiedOCRModel
 
 class InferenceService:
     def __init__(self):
-        self.model_factory = ModelFactory()
+        self.model_factory = ModelFactory() #YOLO models only
         self.models_dir = Path("/app/app/models")
         
         try:
@@ -25,9 +26,9 @@ class InferenceService:
             self.default_model = self.model_factory.load_model('yolo', str(model_path), 'yolo11n')
             print("Successfully loaded YOLO model")
             
-            # Initialize OCR model separately (no model file needed)
+            # Initialize OCR model
             print("Initializing OCR model")
-            self.ocr_model = self.model_factory.load_model('ocr', "", 'easyocr')
+            self.ocr_model = None  # Will be set when needed
             print("Successfully initialized OCR model")
             
         except Exception as e:
@@ -38,10 +39,6 @@ class InferenceService:
         """Get a model by name, loading it if necessary"""
         if not model_name:
             return self.default_model
-            
-        # Special case for OCR
-        if model_name == 'easyocr':
-            return self.ocr_model
             
         try:
             # Try to get already loaded model
@@ -54,106 +51,159 @@ class InferenceService:
             
             return self.model_factory.load_model('yolo', str(model_path), model_name)
     
+    def get_ocr_model(self, model_name: Optional[str] = None) -> UnifiedOCRModel:
+        """Get a UnifiedOCRModel by name, defaults to tesseract if none specified"""
+        model_name = model_name or 'tesseract'  # Default to tesseract
+        if not self.ocr_model or self.ocr_model.model_name != model_name:
+            self.ocr_model = UnifiedOCRModel(model_name)
+        return self.ocr_model
+
     def process_image(self, image_array: np.ndarray, model_name: Optional[str] = None, use_ocr: bool = True) -> Dict:
         """Process a single image and return detections"""
-        # First get vehicle/license plate detections
-        model = self.get_model(model_name)
-        detections, _ = model.predict([image_array], batch_size=1, stream=False, draw_annotations=False)  # We'll handle drawing ourselves
-        
-        # Create a copy of the frame for annotations
-        final_frame = image_array.copy()
-        
-        # Process each detection and draw bounding boxes
-        print("\n=== Processing Detections ===")
-        print(f"Found {len(detections[0])} total detections")
-        
-        for idx, detection in enumerate(detections[0]):
-            class_name = detection.get("class_name", "").lower()
-            print(f"\nDetection {idx + 1}: Class = {class_name} (original: {detection.get('class_name')})")
+        try:
+            print("\n=== Starting Image Processing ===")
+            print(f"Model: {model_name}, OCR Enabled: {use_ocr}")
             
-            # Get bbox coordinates
-            bbox = detection["bbox"]
-            x1, y1, x2, y2 = [int(coord) for coord in bbox]
+            # First get vehicle/license plate detections using YOLO
+            print("Getting YOLO model...")
+            model = self.get_model(model_name)
+            print("Running YOLO prediction...")
+            results = model.predict([image_array], batch_size=1, stream=False, draw_annotations=False)
+            print("YOLO prediction complete")
             
-            # Draw detection box
-            cv2.rectangle(final_frame, (x1, y1), (x2, y2), (0, 255, 0), 3)  # Green box for all detections
+            if not results or len(results) != 2:
+                print("No valid results from YOLO")
+                return {"model_name": model_name, "detections": [], "processed_frame": image_array.copy()}
             
-            # Add class name with confidence
-            class_conf = f"{detection['class_name']} ({detection['confidence']:.2f})"
-            class_font_scale = 1.2
-            class_thickness = 3
-            class_size = cv2.getTextSize(class_conf, cv2.FONT_HERSHEY_SIMPLEX, class_font_scale, class_thickness)[0]
+            detections, _ = results
+            print(f"Raw detections type: {type(detections)}")
+            if detections:
+                print(f"First detection type: {type(detections[0])}")
             
-            # Draw class name background
-            cv2.rectangle(final_frame, 
-                        (x1, y1 - class_size[1] - 20), 
-                        (x1 + class_size[0] + 10, y1 - 10),
-                        (0, 255, 0), -1)  # Green background
+            # Ensure detections is a list of dictionaries
+            if detections:
+                if isinstance(detections[0], list):
+                    print("Unwrapping nested detection list")
+                    detections = detections[0]
+                elif not isinstance(detections[0], dict):
+                    print("Invalid detection format, resetting")
+                    detections = []
+
+            # Create a copy of the frame for annotations
+            final_frame = image_array.copy()
             
-            # Draw class name text
-            cv2.putText(final_frame, class_conf,
-                      (x1 + 5, y1 - 15), cv2.FONT_HERSHEY_SIMPLEX,
-                      class_font_scale, (0, 0, 0), class_thickness)  # Black text
-            
-            # Add OCR if enabled and this is a license plate
-            if use_ocr and any(plate_term in class_name for plate_term in ["license", "plate", "licence", "number"]):
-                print(f"\n=== License Plate OCR Processing ===")
-                print(f"Class name: {class_name}")
-                print(f"Confidence: {detection['confidence']:.2f}")
-                print(f"Bounding box: {bbox}")
-                
-                # Debug: Print cropped region dimensions
-                crop_height = y2 - y1
-                crop_width = x2 - x1
-                print(f"Cropped region dimensions: {crop_width}x{crop_height}")
-                
-                # Debug: Print image info
-                print(f"Input image shape: {image_array.shape}")
-                print(f"Input image dtype: {image_array.dtype}")
-                print(f"Input image min/max values: {np.min(image_array)}/{np.max(image_array)}")
-                
-                # Read text from the license plate region
-                text, confidence = self.ocr_model.read_text_from_region(image_array, bbox)
-                
-                if text:
-                    print(f"✓ OCR Success - Text: {text}, Confidence: {confidence:.2f}")
-                    # Add OCR results to the detection
-                    detection["text"] = text
-                    detection["text_confidence"] = confidence
+            print(f"\nFound {len(detections)} total detections")
+
+            for idx, detection in enumerate(detections):
+                if not isinstance(detection, dict):
+                    print(f"Skipping invalid detection {idx}")
+                    continue
                     
-                    # Draw yellow box for OCR detection
-                    cv2.rectangle(final_frame, (x1, y1), (x2, y2), (0, 255, 255), 4)
-                    
-                    # Add OCR text with confidence
-                    text_with_conf = f"OCR: {text} ({confidence:.2f})"
-                    ocr_font_scale = 1.2
-                    ocr_thickness = 3
-                    text_size = cv2.getTextSize(text_with_conf, cv2.FONT_HERSHEY_SIMPLEX, ocr_font_scale, ocr_thickness)[0]
-                    
-                    # Draw OCR text background - position it above the class name
-                    cv2.rectangle(final_frame, 
-                                (x1, y1 - text_size[1] - class_size[1] - 30), 
-                                (x1 + text_size[0] + 10, y1 - class_size[1] - 20),
-                                (0, 255, 255), -1)  # Yellow background
-                    
-                    # Draw OCR text
-                    cv2.putText(final_frame, text_with_conf,
-                              (x1 + 5, y1 - class_size[1] - 25), cv2.FONT_HERSHEY_SIMPLEX,
-                              ocr_font_scale, (0, 0, 0), ocr_thickness)  # Black text
-                else:
-                    print("✗ No text detected in license plate region")
-        
-        result = {
-            "model_name": model.model_name,
-            "detections": detections[0],
-            "processed_frame": final_frame
-        }
-        return result
+                class_name = detection.get("class_name", "").lower()
+                print(f"\nProcessing Detection {idx + 1}: Class = {class_name}")
+
+                # Get bbox coordinates
+                bbox = detection.get("bbox", [0, 0, 0, 0])
+                x1, y1, x2, y2 = [int(coord) for coord in bbox]
+                print(f"Bounding box: [{x1}, {y1}, {x2}, {y2}]")
+
+                # Draw detection box
+                cv2.rectangle(final_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+                # Add class name with confidence
+                class_conf = f"{detection.get('class_name', '')} ({detection.get('confidence', 0):.2f})"
+                class_font_scale = 0.8
+                class_thickness = 2
+                class_size = cv2.getTextSize(class_conf, cv2.FONT_HERSHEY_SIMPLEX, class_font_scale, class_thickness)[0]
+
+                # Draw class name background with padding
+                padding = 5
+                cv2.rectangle(final_frame, 
+                            (x1, y1 - class_size[1] - padding * 2), 
+                            (x1 + class_size[0] + padding * 2, y1),
+                            (0, 255, 0), -1)  # Green background
+
+                # Draw class name text in black
+                cv2.putText(final_frame, class_conf,
+                          (x1 + padding, y1 - padding), cv2.FONT_HERSHEY_SIMPLEX,
+                          class_font_scale, (0, 0, 0), class_thickness)
+
+                # Add OCR if enabled and this is a license plate
+                if use_ocr and any(plate_term in class_name for plate_term in ["license", "plate", "licence", "number"]):
+                    print("\n=== Starting OCR Processing ===")
+                    try:
+                        # Ensure valid crop region
+                        if x2 <= x1 or y2 <= y1 or x1 < 0 or y1 < 0 or x2 > image_array.shape[1] or y2 > image_array.shape[0]:
+                            print("Invalid crop region, skipping OCR")
+                            continue
+
+                        print("Cropping license plate region...")
+                        cropped = image_array[y1:y2, x1:x2]
+                        if cropped.size == 0:
+                            print("Empty crop region, skipping OCR")
+                            continue
+
+                        print(f"Cropped region shape: {cropped.shape}")
+                        print("Getting OCR model...")
+                        ocr_model = self.get_ocr_model()
+                        print(f"Using OCR model: {ocr_model.model_name}")
+                        
+                        print("Starting OCR text extraction...")
+                        text, confidence = ocr_model.read_text_from_region(cropped, [0, 0, x2-x1, y2-y1])
+                        print("OCR text extraction complete")
+
+                        if text:
+                            text = text.strip().upper().replace(' ', '')
+                            print(f"OCR Success - Text: {text}, Confidence: {confidence:.2f}")
+                            
+                            detection["text"] = text
+                            detection["text_confidence"] = confidence
+
+                            # Draw OCR results in green to match detection
+                            cv2.rectangle(final_frame, (x1, y1), (x2, y2), (0, 255, 0), 3)
+                            text_with_conf = f"OCR: {text} ({confidence:.2f})"
+                            text_font_scale = 0.8
+                            text_thickness = 2
+                            text_size = cv2.getTextSize(text_with_conf, cv2.FONT_HERSHEY_SIMPLEX, text_font_scale, text_thickness)[0]
+
+                            # Draw OCR text background in green
+                            cv2.rectangle(final_frame, 
+                                        (x1, y1 - text_size[1] - class_size[1] - padding * 4), 
+                                        (x1 + text_size[0] + padding * 2, y1 - class_size[1] - padding * 2),
+                                        (0, 255, 0), -1)
+
+                            # Draw OCR text in black
+                            cv2.putText(final_frame, text_with_conf,
+                                      (x1 + padding, y1 - class_size[1] - padding * 3), cv2.FONT_HERSHEY_SIMPLEX,
+                                      text_font_scale, (0, 0, 0), text_thickness)
+                        else:
+                            print("No text detected in license plate region")
+                    except Exception as e:
+                        print(f"Error in OCR processing: {str(e)}")
+                        continue
+                    print("=== OCR Processing Complete ===\n")
+
+            print("\n=== Image Processing Complete ===")
+            result = {
+                "model_name": model_name,
+                "detections": detections if isinstance(detections, list) else [],
+                "processed_frame": final_frame
+            }
+            return result
+        except Exception as e:
+            print(f"Error processing image: {str(e)}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            return {"model_name": model_name, "detections": [], "processed_frame": image_array.copy()}
     
     def process_video_batch(self, frames: List[np.ndarray], batch_size: int = 16, use_ocr: bool = True) -> Tuple[List[Dict], List[np.ndarray]]:
         """Process a batch of video frames with optimized batch inference"""
         # Get detections from YOLO
         detections, processed_frames = self.default_model.predict(frames, batch_size=batch_size, stream=False, draw_annotations=False)
+        
+        # Ensure detections is a list of lists
+        if detections and not isinstance(detections[0], list):
+            detections = [[d] for d in detections]
         
         # Create copies of frames for annotations
         final_frames = [frame.copy() for frame in frames]
@@ -176,23 +226,24 @@ class InferenceService:
                     x1, y1, x2, y2 = [int(coord) for coord in bbox]
                     
                     # Draw detection box
-                    cv2.rectangle(final_frames[frame_idx], (x1, y1), (x2, y2), (0, 255, 0), 3)  # Green box for all detections
+                    cv2.rectangle(final_frames[frame_idx], (x1, y1), (x2, y2), (0, 255, 0), 2)  # Thinner green box
                     
                     # Add class name with confidence
                     class_conf = f"{detection['class_name']} ({detection['confidence']:.2f})"
-                    class_font_scale = 1.2
-                    class_thickness = 3
+                    class_font_scale = 0.8  # Smaller font
+                    class_thickness = 2  # Thinner text
                     class_size = cv2.getTextSize(class_conf, cv2.FONT_HERSHEY_SIMPLEX, class_font_scale, class_thickness)[0]
                     
-                    # Draw class name background
+                    # Draw class name background with padding
+                    padding = 5
                     cv2.rectangle(final_frames[frame_idx], 
-                                (x1, y1 - class_size[1] - 20), 
-                                (x1 + class_size[0] + 10, y1 - 10),
+                                (x1, y1 - class_size[1] - padding * 2), 
+                                (x1 + class_size[0] + padding * 2, y1),
                                 (0, 255, 0), -1)  # Green background
                     
                     # Draw class name text
                     cv2.putText(final_frames[frame_idx], class_conf,
-                              (x1 + 5, y1 - 15), cv2.FONT_HERSHEY_SIMPLEX,
+                              (x1 + padding, y1 - padding), cv2.FONT_HERSHEY_SIMPLEX,
                               class_font_scale, (0, 0, 0), class_thickness)  # Black text
                     
                     # Check for license plate and add OCR
@@ -205,7 +256,8 @@ class InferenceService:
                         print(f"Cropped region dimensions: {crop_width}x{crop_height}")
                         
                         # Read text from the license plate region
-                        text, confidence = self.ocr_model.read_text_from_region(frame, bbox)
+                        ocr_model = self.get_ocr_model()  # Use default OCR model
+                        text, confidence = ocr_model.read_text_from_region(frame[y1:y2, x1:x2], [0, 0, x2-x1, y2-y1])
                         
                         if text:
                             print(f"✓ OCR Success - Text: {text}, Confidence: {confidence:.2f}")
@@ -214,23 +266,23 @@ class InferenceService:
                             detection["text_confidence"] = confidence
                             
                             # Draw yellow box for OCR detection
-                            cv2.rectangle(final_frames[frame_idx], (x1, y1), (x2, y2), (0, 255, 255), 4)
+                            cv2.rectangle(final_frames[frame_idx], (x1, y1), (x2, y2), (0, 255, 255), 3)
                             
                             # Add OCR text with confidence
                             text_with_conf = f"OCR: {text} ({confidence:.2f})"
-                            ocr_font_scale = 1.2
-                            ocr_thickness = 3
+                            ocr_font_scale = 0.8  # Smaller font
+                            ocr_thickness = 2  # Thinner text
                             text_size = cv2.getTextSize(text_with_conf, cv2.FONT_HERSHEY_SIMPLEX, ocr_font_scale, ocr_thickness)[0]
                             
-                            # Draw OCR text background - position it above the class name
+                            # Draw OCR text background with padding
                             cv2.rectangle(final_frames[frame_idx], 
-                                        (x1, y1 - text_size[1] - class_size[1] - 30), 
-                                        (x1 + text_size[0] + 10, y1 - class_size[1] - 20),
+                                        (x1, y1 - text_size[1] - class_size[1] - padding * 4), 
+                                        (x1 + text_size[0] + padding * 2, y1 - class_size[1] - padding * 2),
                                         (0, 255, 255), -1)  # Yellow background
                             
                             # Draw OCR text
                             cv2.putText(final_frames[frame_idx], text_with_conf,
-                                      (x1 + 5, y1 - class_size[1] - 25), cv2.FONT_HERSHEY_SIMPLEX,
+                                      (x1 + padding, y1 - class_size[1] - padding * 3), cv2.FONT_HERSHEY_SIMPLEX,
                                       ocr_font_scale, (0, 0, 0), ocr_thickness)  # Black text
                         else:
                             print("✗ No text detected in license plate region")
