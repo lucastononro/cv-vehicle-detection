@@ -9,11 +9,25 @@ export interface Video {
   thumbnail?: string;
 }
 
+export interface Image {
+  filename: string;
+  size: number;
+  last_modified: string;
+}
+
 export interface Detection {
   class_id: number;
   class_name: string;
   confidence: number;
   bbox: number[];
+  text?: string;
+  text_confidence?: number;
+}
+
+export interface ImageInferenceResult {
+  model_name: string;
+  detections: Detection[];
+  processed_image: string;
 }
 
 const api = axios.create({
@@ -52,5 +66,42 @@ export const videoService = {
     const url = modelName ? `${baseUrl}?model_name=${encodeURIComponent(modelName)}` : baseUrl;
     console.log('Generated inference URL:', url);
     return url;
+  }
+};
+
+export const imageService = {
+  async uploadImage(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/images/upload/', formData);
+    return response.data;
+  },
+
+  async listImages(): Promise<Image[]> {
+    const response = await api.get('/images/list/');
+    return response.data;
+  },
+
+  async processImage(imageName: string, useOcr: boolean = true, modelName?: string): Promise<ImageInferenceResult> {
+    const response = await api.get(`/images/inference/${imageName}`, {
+      params: { 
+        use_ocr: useOcr,
+        model_name: modelName
+      }
+    });
+    return response.data;
+  },
+
+  getImageUrl(imageName: string): string {
+    return `${API_URL}/images/${encodeURIComponent(imageName)}`;
+  },
+
+  getInferenceImageUrl(imageName: string): string {
+    return `${API_URL}/images/inference/${encodeURIComponent(imageName)}`;
+  },
+
+  async getAvailableModels(): Promise<string[]> {
+    const response = await api.get('/videos/models');
+    return response.data;
   }
 }; 

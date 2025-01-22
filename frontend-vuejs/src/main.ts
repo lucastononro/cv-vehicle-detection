@@ -14,7 +14,8 @@ import {
   faClock,
   faChevronRight,
   faSpinner,
-  faPlay
+  faPlay,
+  faUpload
 } from '@fortawesome/free-solid-svg-icons'
 import { faGithub } from '@fortawesome/free-brands-svg-icons'
 
@@ -33,7 +34,8 @@ library.add(
   faClock,
   faChevronRight,
   faSpinner,
-  faPlay
+  faPlay,
+  faUpload
 )
 
 const app = createApp(App)

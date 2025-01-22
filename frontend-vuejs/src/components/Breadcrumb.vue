@@ -6,14 +6,54 @@ const route = useRoute();
 
 const breadcrumbs = computed(() => {
   const paths = route.path.split('/').filter(Boolean);
-  // If we're in a video route, only show the filename
+  
+  // Handle empty path (home)
+  if (paths.length === 0) return [];
+
+  // Handle video routes
   if (paths[0] === 'video') {
+    if (paths.length === 1) {
+      // Video list route
+      return [{
+        path: '/video',
+        label: 'Videos',
+        isLast: true
+      }];
+    }
+    // Video detail route
     return [{
+      path: '/video',
+      label: 'Videos',
+      isLast: false
+    }, {
       path: `/${paths.join('/')}`,
       label: decodeURIComponent(paths[1]),
       isLast: true
     }];
   }
+
+  // Handle image routes
+  if (paths[0] === 'image') {
+    if (paths.length === 1) {
+      // Image list route
+      return [{
+        path: '/image',
+        label: 'Images',
+        isLast: true
+      }];
+    }
+    // Image detail route
+    return [{
+      path: '/image',
+      label: 'Images',
+      isLast: false
+    }, {
+      path: `/${paths.join('/')}`,
+      label: decodeURIComponent(paths[1]),
+      isLast: true
+    }];
+  }
+
   // For other routes, show all path segments
   return paths.map((path, index) => {
     const isLast = index === paths.length - 1;

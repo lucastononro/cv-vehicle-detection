@@ -100,11 +100,6 @@ onUnmounted(() => {
 
 <template>
   <div class="video-view">
-    <div class="header-section">
-      <h1>Detection System</h1>
-      <p class="subtitle">Upload your videos and detect vehicles using advanced AI technology powered by YOLOvX</p>
-    </div>
-
     <div class="content-section">
       <Breadcrumb />
       
@@ -200,32 +195,6 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 2rem;
   width: 100%;
-}
-
-.header-section {
-  text-align: center;
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem 0;
-  width: 100%;
-}
-
-h1 {
-  font-size: 3.5rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 1.5rem;
-  line-height: 1.2;
-  background: linear-gradient(to right, var(--primary-color), var(--primary-dark));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.subtitle {
-  font-size: 1.25rem;
-  color: var(--text-secondary);
-  max-width: 600px;
-  margin: 0 auto;
 }
 
 .content-section {
@@ -500,14 +469,6 @@ h1 {
   .video-container {
     width: 100%;
     min-width: unset;
-  }
-
-  h1 {
-    font-size: 2.5rem;
-  }
-
-  .subtitle {
-    font-size: 1.1rem;
   }
 
   .video-actions {

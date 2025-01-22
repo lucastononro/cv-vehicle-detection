@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { videoService } from '@/services/api';
+import { imageService } from '@/services/api';
 
 const emit = defineEmits<{
   'upload-complete': []
@@ -28,18 +28,18 @@ const handleFileInput = async (e: Event) => {
 };
 
 const uploadFile = async (file: File) => {
-  if (!file.name.toLowerCase().match(/\.(mp4|avi|mov)$/)) {
-    alert('Please upload a valid video file (MP4)');
+  if (!file.name.toLowerCase().match(/\.(jpg|jpeg|png)$/)) {
+    alert('Please upload a valid image file (JPG or PNG)');
     return;
   }
 
   try {
     isUploading.value = true;
-    await videoService.uploadVideo(file);
+    await imageService.uploadImage(file);
     emit('upload-complete');
   } catch (error) {
-    console.error('Error uploading video:', error);
-    alert('Failed to upload video. Please try again.');
+    console.error('Error uploading image:', error);
+    alert('Failed to upload image. Please try again.');
   } finally {
     isUploading.value = false;
     uploadProgress.value = 0;
@@ -61,13 +61,13 @@ const uploadFile = async (file: File) => {
         <font-awesome-icon icon="cloud-upload-alt" />
       </div>
       <div class="upload-text">
-        <h3>Drag and drop your video here</h3>
+        <h3>Drag and drop your image here</h3>
         <p>or</p>
         <label class="upload-button">
           Browse Files
           <input
             type="file"
-            accept=".mp4,.avi,.mov"
+            accept="image/*"
             @change="handleFileInput"
             style="display: none"
           >
