@@ -13,9 +13,7 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = "test"
     AWS_DEFAULT_REGION: str = "us-east-1"
     S3_ENDPOINT_URL: str = "http://localstack:4566"
-    
-    # Database Configuration
-    DATABASE_URL: str
+
     
     # CORS Settings
     CORS_ORIGINS: List[str] = json.loads(

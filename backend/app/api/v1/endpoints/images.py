@@ -214,16 +214,14 @@ async def get_image(image_name: str):
 async def get_pipeline_inference(
     image_name: str,
     use_ocr: bool = True,
-    pipeline: str = None,
-    s3_service: S3Service = Depends(get_s3_service),
-    pipeline_service: ModelPipeline = Depends(get_pipeline_service),
+    pipeline: Optional[str] = None
 ):
     """
     Get inference results for an image using model pipeline
     """
     try:
         # Get image from S3
-        image_bytes = await s3_service.get_file(image_name)
+        image_bytes = s3_repo.get_file_bytes(image_name, bucket_type="images")
         if not image_bytes:
             raise HTTPException(status_code=404, detail="Image not found")
 
@@ -239,7 +237,7 @@ async def get_pipeline_inference(
         
         # Convert processed image to base64
         _, buffer = cv2.imencode('.jpg', result['image'])
-        processed_image = base64.b64encode(buffer).decode('utf-8')
+        processed_image = base64.b64encode(buffer.tobytes()).decode('utf-8')
         processed_image = f"data:image/jpeg;base64,{processed_image}"
 
         return {
@@ -248,5 +246,5 @@ async def get_pipeline_inference(
         }
 
     except Exception as e:
-        logger.error(f"Error in pipeline inference: {str(e)}")
+        print(f"Error in pipeline inference: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e)) 
