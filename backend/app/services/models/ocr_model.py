@@ -146,41 +146,40 @@ class OCRPreprocessor:
         gray = self.to_grayscale(image)
         gray = self.resize_image(gray, width=600)
         if verbose:
-            self.save_debug_image(gray, "01_grayscale", timestamp)
-        return gray
-        # 2. Apply blackhat operation
+            self.save_debug_image(gray, "01_grayscale", timestamp)        # 2. Apply blackhat operation
         blackhat = self.apply_blackhat(gray)
         if verbose:
             self.save_debug_image(blackhat, "02_blackhat", timestamp)
+        return blackhat
         
-        # 3. Find light regions
-        light = self.find_light_regions(gray)
-        if verbose:
-            self.save_debug_image(light, "03_light_regions", timestamp)
+        # # 3. Find light regions
+        # light = self.find_light_regions(gray)
+        # if verbose:
+        #     self.save_debug_image(light, "03_light_regions", timestamp)
         
-        # 4. Compute gradient
-        gradient = self.compute_gradient(blackhat)
-        if verbose:
-            self.save_debug_image(gradient, "04_gradient", timestamp)
+        # # 4. Compute gradient
+        # gradient = self.compute_gradient(blackhat)
+        # if verbose:
+        #     self.save_debug_image(gradient, "04_gradient", timestamp)
         
-        # 5. Process gradient
-        thresh = self.process_gradient(gradient)
-        if verbose:
-            self.save_debug_image(thresh, "05_thresh", timestamp)
+        # # 5. Process gradient
+        # thresh = self.process_gradient(gradient)
+        # if verbose:
+        #     self.save_debug_image(thresh, "05_thresh", timestamp)
         
-        # 6. Find plate region
-        lp_roi, binary_roi = self.find_plate_region(thresh, light, gray)
+        # # 6. Find plate region
+        # lp_roi, binary_roi = self.find_plate_region(thresh, light, gray)
         
-        if lp_roi is None:
-            return gray  # Return original grayscale if no plate found
+        # if lp_roi is None:
+        #     return gray  # Return original grayscale if no plate found
         
-        if verbose:
-            if lp_roi is not None:
-                self.save_debug_image(lp_roi, "06_plate_roi", timestamp)
-            if binary_roi is not None:
-                self.save_debug_image(binary_roi, "07_binary_roi", timestamp)
+        # if verbose:
+        #     if lp_roi is not None:
+        #         self.save_debug_image(lp_roi, "06_plate_roi", timestamp)
+        #     if binary_roi is not None:
+        #         self.save_debug_image(binary_roi, "07_binary_roi", timestamp)
         
-        return binary_roi if binary_roi is not None else lp_roi
+        # return binary_roi if binary_roi is not None else lp_roi
 
 class OCRModel(BaseModel):
     def __init__(self, model_path: Optional[str] = None, model_name: str = "easyocr", debug_output_dir: str = "debug_output"):
