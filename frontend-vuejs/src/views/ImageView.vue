@@ -20,11 +20,8 @@
             <h3>Detection Results</h3>
             <div class="inference-container">
               <img
-                v-if="processedImage"
+                v-if="processedImage && !isProcessing"
                 :src="processedImage"
-                :style="{
-                  display: showInference && !isProcessing ? 'block' : 'none'
-                }"
                 alt="Processed image"
               />
               <div v-if="isProcessing" class="loading-overlay">
@@ -124,7 +121,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { imageService, type PipelineStep } from '@/services/api';
+import { imageService, type PipelineStep, type Detection } from '@/services/api';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 
 const route = useRoute();
@@ -173,16 +170,17 @@ const startInference = async () => {
         )
       : await imageService.processImage(
           imageName,
-          selectedModel.value,
-          useOcr.value
+          useOcr.value,
+          selectedModel.value
         );
     
     processedImage.value = result.processed_image;
     detections.value = result.detections;
+    isProcessing.value = false;
   } catch (error) {
     console.error('Error processing image:', error);
-  } finally {
     isProcessing.value = false;
+    showInference.value = false;
   }
 };
 
