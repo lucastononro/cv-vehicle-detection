@@ -34,11 +34,11 @@
 3. Ensure Tesseract is installed and accessible:
    - On macOS: `brew install tesseract`
    - On Ubuntu: `sudo apt-get install tesseract-ocr`
-   - On Windows: Download the installer from [Tesseract GitHub](https://github.com/UB-Mannheim/tesseract/wiki)
+   - On Windows: Download the installer from [Tesseract GitHub](https://github.com/UB-Mannheim/tesseract/wiki) (or just do it with pip lol ;D)
 
 ## Usage
 
-1. Place your test images in the `images/` directory. Ensure they are in PNG format.
+1. Place your test images in the `images/` directory. Ensure they are in PNG format and their name correspond to the ground-trugh.
 
 2. Run the test script to evaluate all OCR models:
    ```bash
