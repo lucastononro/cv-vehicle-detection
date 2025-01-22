@@ -61,3 +61,8 @@ machine-learning/src/runs/*
 machine-learning/wandb/*
 machine-learning/src/data/*
 machine-learning/src/models/*
+
+machine-learning-yolo/src/runs/*
+machine-learning-yolo/wandb/*
+machine-learning-yolo/src/data/*
+machine-learning-yolo/src/models/*
