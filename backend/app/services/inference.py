@@ -97,12 +97,20 @@ class InferenceService:
             
             # Add OCR if enabled and this is a license plate
             if use_ocr and any(plate_term in class_name for plate_term in ["license", "plate", "licence", "number"]):
-                print(f"License plate detected at bbox: {bbox}")
+                print(f"\n=== License Plate OCR Processing ===")
+                print(f"Class name: {class_name}")
+                print(f"Confidence: {detection['confidence']:.2f}")
+                print(f"Bounding box: {bbox}")
                 
                 # Debug: Print cropped region dimensions
                 crop_height = y2 - y1
                 crop_width = x2 - x1
                 print(f"Cropped region dimensions: {crop_width}x{crop_height}")
+                
+                # Debug: Print image info
+                print(f"Input image shape: {image_array.shape}")
+                print(f"Input image dtype: {image_array.dtype}")
+                print(f"Input image min/max values: {np.min(image_array)}/{np.max(image_array)}")
                 
                 # Read text from the license plate region
                 text, confidence = self.ocr_model.read_text_from_region(image_array, bbox)

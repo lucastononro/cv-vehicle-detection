@@ -26,14 +26,24 @@ class OCRModel(BaseModel):
             x1, x2 = max(0, x1), min(w, x2)
             y1, y2 = max(0, y1), min(h, y2)
             
+            print(f"\nOCR Debug Info:")
+            print(f"Original image shape: {image.shape}")
+            print(f"Bounding box coordinates: x1={x1}, y1={y1}, x2={x2}, y2={y2}")
+            
             # Crop the region
             cropped = image[y1:y2, x1:x2]
             if cropped.size == 0:
+                print("Error: Cropped region is empty")
                 return None, None
+            
+            print(f"Cropped region shape: {cropped.shape}")
+            print(f"Cropped region dtype: {cropped.dtype}")
+            print(f"Cropped region min/max values: {np.min(cropped)}/{np.max(cropped)}")
             
             # Perform OCR on cropped region
             detections = self.reader.readtext(cropped)
             if not detections:
+                print("No text detected in region")
                 return None, None
             
             # Get the text with highest confidence
