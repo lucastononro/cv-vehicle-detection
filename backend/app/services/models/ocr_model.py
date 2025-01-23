@@ -11,6 +11,11 @@ from PIL import Image
 import pytesseract
 from fast_plate_ocr import ONNXPlateRecognizer
 import tempfile
+import base64
+from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 try:
     from skimage.segmentation import clear_border
@@ -491,6 +496,130 @@ class FastPlateWrapper:
             print(f"Traceback: {traceback.format_exc()}")
             return []
 
+class GPT4VisionWrapper:
+    """Wrapper for OpenAI GPT-4 Vision API"""
+    def __init__(self, use_postprocessing: bool = False):
+        """
+        Initialize GPT-4 Vision wrapper.
+        Args:
+            use_postprocessing: Whether to use license plate post-processing
+        """
+        print("Initializing GPT-4 Vision OCR...")
+        try:
+            api_key = os.environ.get('OPENAI_API_KEY')
+            print(f"API Key: {api_key}")
+            self.client = OpenAI(api_key=api_key)
+            self.prompt = "What license plate characters/number do you see in this image? Please respond with ONLY the license plate number, no additional text. Do not invent information, return <FAILED> if you cant see the license plate or are not sure. Formats in Brazil: LLLDDDD or LLLDLDD - where L is a letter and D is a number - if the image is incomplete bring the digits you can see"
+            print("GPT-4 Vision initialized successfully!")
+        except Exception as e:
+            print(f"Error initializing GPT-4 Vision: {str(e)}")
+            raise
+
+    def encode_image(self, image_path: str) -> str:
+        """Encode image to base64"""
+        with open(image_path, "rb") as image_file:
+            return base64.b64encode(image_file.read()).decode("utf-8")
+
+    def extract_text(self, image: np.ndarray) -> List[Tuple[str, float]]:
+        """
+        Extract text from an image using GPT-4 Vision.
+        
+        Args:
+            image: numpy array of the image
+            
+        Returns:
+            List of tuples containing (text, confidence_score)
+        """
+        try:
+            print("Starting GPT-4 Vision text detection...")
+            print(f"Input image shape: {image.shape}")
+            
+            # Save image temporarily since we need a file path for base64 encoding
+            with tempfile.NamedTemporaryFile(suffix='.jpg', delete=True) as temp_file:
+                cv2.imwrite(temp_file.name, image)
+                
+                print("Image saved to temp file")
+                # Encode image
+                base64_image = self.encode_image(temp_file.name)
+                
+                # Run inference
+                print("Running GPT-4 Vision inference...")
+                response = self.client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": self.prompt},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:image/jpeg;base64,{base64_image}"
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    max_tokens=100
+                )
+                
+                # Extract text from response
+                print("Response:", response)
+                if response.choices and response.choices[0].message.content:
+                    text = response.choices[0].message.content.strip().upper()
+                    # Use 1.0 as confidence since GPT-4 doesn't provide confidence scores
+                    print(f"Detected: {text} (conf: 1.00)")
+                    return [(text, 1.0)]
+                
+                print("No text detected")
+                return []
+                
+        except Exception as e:
+            print(f"Error in GPT-4 Vision text extraction: {str(e)}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            return []
+
+    def process_image(self, image: Image.Image) -> str:
+        """Process a single image."""
+        # Convert PIL Image to numpy array
+        image_np = np.array(image)
+        if len(image_np.shape) == 2:  # If grayscale, convert to RGB
+            image_np = cv2.cvtColor(image_np, cv2.COLOR_GRAY2RGB)
+        elif image_np.shape[2] == 4:  # If RGBA, convert to RGB
+            image_np = cv2.cvtColor(image_np, cv2.COLOR_RGBA2RGB)
+        
+        # Extract text
+        results = self.extract_text(image_np)
+        if results:
+            return results[0][0]  # Return the text from the first result
+        return ""
+
+    def __call__(self, image_path: str) -> str:
+        """Run OCR on an image."""
+        try:
+            print(f"\nProcessing image with GPT-4 Vision: {image_path}")
+            
+            # Load and verify image
+            if not os.path.exists(image_path):
+                raise ValueError(f"Image file not found: {image_path}")
+            
+            # Read image
+            image = Image.open(image_path).convert("RGB")
+            
+            # Process image
+            print("Running OCR...")
+            text = self.process_image(image)
+            print(f"Raw GPT-4 Vision Result: {text}")
+            
+            return text
+            
+        except Exception as e:
+            print(f"Error processing image: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return ""
+
 class OCRModelFactory:
     def __init__(self):
         self._model_classes = {
@@ -498,7 +627,8 @@ class OCRModelFactory:
             'trocr_finetuned': TrOCRFinetunedWrapper,
             'tesseract': TesseractWrapper,
             'trocr_large': TrOCRLargeWrapper,
-            'fastplate': FastPlateWrapper
+            'fastplate': FastPlateWrapper,
+            'gpt4-vision': GPT4VisionWrapper  # Add GPT-4 Vision model
         }
         self._loaded_models = {}  # Cache for loaded models
 
@@ -525,6 +655,8 @@ class OCRModelFactory:
         elif model_name == 'trocr_large':
             model = self._model_classes[model_name]()
         elif model_name == 'fastplate':
+            model = self._model_classes[model_name]()
+        elif model_name == 'gpt4-vision':  # Add GPT-4 Vision initialization
             model = self._model_classes[model_name]()
         
         # Cache the model
@@ -602,3 +734,4 @@ class UnifiedOCRModel(BaseModel):
     def process_video_batch(self, frames: List[np.ndarray], batch_size: int = 16) -> Tuple[List[Dict], List[np.ndarray]]:
         """Not meant to be used directly for UnifiedOCRModel"""
         return self.predict(frames, batch_size=batch_size, stream=False, draw_annotations=True) 
+

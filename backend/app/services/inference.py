@@ -14,6 +14,7 @@ from .models.ocr_model import (
     TesseractWrapper, 
     TrOCRLargeWrapper, 
     FastPlateWrapper,
+    GPT4VisionWrapper,
     UnifiedOCRModel
 )
 
@@ -63,7 +64,12 @@ class InferenceService:
         model_name = model_name or 'easyocr'  # Default to easyocr
         if not self.ocr_model or self.ocr_model.model_name != model_name:
             print(f"Creating new OCR model instance for: {model_name}")
-            self.ocr_model = UnifiedOCRModel(model_name)
+            # Handle special case for GPT-4 Vision model
+            if model_name == 'gpt4-vision':
+                print("Initializing GPT-4 Vision model...")
+                self.ocr_model = UnifiedOCRModel(model_name)
+            else:
+                self.ocr_model = UnifiedOCRModel(model_name)
         return self.ocr_model
 
     def process_image(self, image_array: np.ndarray, model_name: Optional[str] = None, use_ocr: bool = True, ocr_model: Optional[str] = 'easyocr') -> Dict:

@@ -30,5 +30,6 @@ AVAILABLE_OCR_MODELS = [
     'tesseract',
     'trocr-finetuned',
     'trocr-large',
-    'fastplate'  # Add FastPlate to available models
+    'fastplate',
+    'gpt4-vision'  # Add GPT-4 Vision to available models
 ] 

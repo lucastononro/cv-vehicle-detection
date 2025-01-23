@@ -193,6 +193,7 @@ onUnmounted(() => {
                   <option value="trocr-finetuned">TrOCR Finetuned</option>
                   <option value="trocr-large">TrOCR Large</option>
                   <option value="fastplate">FastPlate</option>
+                  <option value="gpt4-vision">GPT-4 Vision</option>
                 </select>
               </div>
             </div>
