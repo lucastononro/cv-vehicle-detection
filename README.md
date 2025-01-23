@@ -1,47 +1,96 @@
-# cv-vehicle-detection
+# Automated License Plate Recognition (ALPR) System
 
-##  DISCLAIMER: This is not a production-ready application. It is a proof of concept.
+## Disclaimer
+**This is a proof-of-concept application and is not intended for production use.**
 
-# What is this repo?
+## Overview
+Automated License Plate Recognition (ALPR) system, combining vehicle detection, license plate detection, and Optical Character Recognition (OCR). The project demonstrates the integration of modern computer vision techniques with a production-like architecture.
 
-This is a toy project created to implement vehicle detection, license plate detection and OCR composing what we call ALPR (Automated License Plate Recognition).
+## Key Features
+- Vehicle and license plate detection using YOLOv11
+- Multiple OCR approaches for license plate text recognition
+- Real-time video processing capabilities
+- Interactive web interface for testing and visualization
+- Containerized microservices architecture
 
-# What was carried out?
+## System Architecture
+The project consists of four main components:
 
-1. First I started looking for custom training of Yolo models using YOLOv11.
-2. A lot of data could be found on roboflow so I designed a simple training pipeline for YoloV11 for custom models focused on license plate detections
-3. Then we trained and monitored the model using Wandb - first results were OK, but better models could be found online
-4. To test the model for both images and videos we designed a simple FastAPI backend and a vuejs frontend as a playground
-5. I realized that the hardest part was to get a good OCR model. I tried a lot of models and none of them were good enough - but could handle some simple license plates
-6. used easyocr, TrOCR finetuned, TrOCR large and tesseract
-7. explored ways to preprocess image to improve results (blackhat, deskew, denoise, etc..) gettin better results but still poor in hard datasets
+1. **FastAPI Backend**
+   - REST API endpoints for detection and OCR processing
+   - Real-time video stream processing
+   - Model serving and inference
+   - Available at `http://localhost:8000`
 
+2. **Vue.js Frontend**
+   - Interactive UI for model testing
+   - Real-time detection visualization
+   - Image and video upload capabilities
+   - Available at `http://localhost:5176`
 
-# Project architecture
+3. **LocalStack S3**
+   - Local S3-compatible storage
+   - Handles image and video storage
+   - Available at `http://localhost:4566`
 
-Basically:
+4. **Machine Learning Components**
+   - YOLOv11 custom models for vehicle/plate detection
+   - Multiple OCR approaches (EasyOCR, TrOCR, Tesseract, GPT-4o)
+   - Image preprocessing pipeline
+   - Model training and evaluation tools
 
+## Technical Implementation
 
-- python fastapi backend loading models and serving it (streaming video img by img - nothing fancy like webRTC, HLS, etc...)
-- vuejs frontend to test the model
-- s3 localstack service
-- machine learning training and testing folders supporting both yolo model training and ocr model testing
+### Vehicle Detection
+- Custom training YOLOv11 models & pipeline using Roboflow datasets
+- Weights & Biases integration (wandb.com) for training performance
+- Platform for testing using vue.js as frontend and fastapi as backend
+- Automated labeling using heavy-weight api models such as gpt-4o for OCR data collection
 
+### License Plate Recognition
+- Multi-stage OCR pipeline
+- Supported models:
+  - EasyOCR
+  - TrOCR (fine-tuned and large variants)
+  - Tesseract
+  - GPT
+- Image preprocessing techniques:
+  - Blackhat transformation
+  - Deskewingß
+  - Denoising
+  - Custom preprocessing pipeline
 
-More info in folder `readmes`
-- [backend](backend/README.md)
-- [frontend](frontend/README.md)
-- s3 localstack service
-- [machine learning yolo models](machine-learning-yolo/README.md)
-- [machine learning ocr models](machine-learning-ocr/README.md)
+## Getting Started
 
-# How to run the project ideally
+### Prerequisites
+- Docker and Docker Compose
+- CUDA-capable GPU (optional, for improved performance)
 
-Docker compose is the easiest way to run the project.
-
+### Quick Start
 ```bash
+# Clone the repository
+git clone https://github.com/yourusername/cv-vehicle-detection.git
+
+# Start all services
 docker compose up --build
 ```
 
-this should start the backend, frontend, localstack and get you going
+### Accessing Services
+- Backend API: `http://localhost:8000`
+  - Swagger UI: `http://localhost:8000/docs`
+  - ReDoc: `http://localhost:8000/redoc`
+- Frontend: `http://localhost:5176`
+- LocalStack S3: `http://localhost:4566`
 
+## Detailed Documentation
+For more detailed information about specific components:
+- [Backend Service](backend/README.md)
+- [Frontend Application](frontend/README.md)
+- [YOLO Models](machine-learning-yolo/src/README.md)
+- [OCR Implementation](machine-learning-ocr/README.md)
+
+## Development Status
+This project is actively being developed as a proof of concept. While functional, several areas are being improved:
+- OCR accuracy on challenging license plates
+- Real-time processing optimization
+- Model fine-tuning for specific use cases

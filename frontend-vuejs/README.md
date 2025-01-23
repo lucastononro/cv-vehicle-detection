@@ -38,7 +38,7 @@ The easiest way to run the frontend is using Docker Compose from the root direct
 docker compose up --build
 ```
 
-This will start the frontend application at `http://localhost:3000` (or the port specified in your configuration).
+This will start the frontend application at `http://localhost:5176` (or the port specified in your configuration).
 
 ### Useful Commands
 
