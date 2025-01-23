@@ -167,9 +167,16 @@ async def stream_inference(
     background_tasks: BackgroundTasks, 
     model_name: Optional[str] = None,
     use_ocr: bool = True,
-    ocr_model: Optional[str] = 'easyocr'
+    ocr_model: Optional[str] = 'easyocr'  # FastPlate will be available as 'fastplate'
 ):
-    """Stream video with real-time inference and OCR (enabled by default)"""
+    """
+    Stream video with real-time inference and OCR
+    
+    - **video_name**: Name of the video to process
+    - **model_name**: Optional YOLO model name
+    - **use_ocr**: Whether to use OCR on detected license plates
+    - **ocr_model**: OCR model to use ('easyocr', 'tesseract', 'trocr-finetuned', 'trocr-large', 'fastplate')
+    """
     try:
         with tempfile.NamedTemporaryFile(suffix=os.path.splitext(video_name)[1], delete=False) as temp_video:
             # Download video from S3

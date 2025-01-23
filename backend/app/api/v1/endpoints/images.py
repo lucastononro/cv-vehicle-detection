@@ -163,9 +163,16 @@ async def get_inference(
     image_name: str,
     model_name: Optional[str] = None,
     use_ocr: bool = True,
-    ocr_model: Optional[str] = 'easyocr'
+    ocr_model: Optional[str] = 'easyocr'  # FastPlate will be available as 'fastplate'
 ):
-    """Get inference results for an image"""
+    """
+    Get inference results for an image
+    
+    - **image_name**: Name of the image to process
+    - **model_name**: Optional YOLO model name
+    - **use_ocr**: Whether to use OCR on detected license plates
+    - **ocr_model**: OCR model to use ('easyocr', 'tesseract', 'trocr-finetuned', 'trocr-large', 'fastplate')
+    """
     try:
         # Download image from S3 images bucket
         image_bytes = s3_repo.get_file_bytes(image_name, bucket_type="images")

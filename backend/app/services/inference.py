@@ -8,7 +8,14 @@ from pathlib import Path
 import numpy as np
 from .models.model_factory import ModelFactory
 from .models.base_model import BaseModel
-from .models.ocr_model import EasyOCRWrapper, TrOCRFinetunedWrapper, TesseractWrapper, TrOCRLargeWrapper, UnifiedOCRModel
+from .models.ocr_model import (
+    EasyOCRWrapper, 
+    TrOCRFinetunedWrapper, 
+    TesseractWrapper, 
+    TrOCRLargeWrapper, 
+    FastPlateWrapper,
+    UnifiedOCRModel
+)
 
 class InferenceService:
     def __init__(self):

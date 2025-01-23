@@ -9,6 +9,8 @@ from transformers import TrOCRProcessor, VisionEncoderDecoderModel
 import torch
 from PIL import Image
 import pytesseract
+from fast_plate_ocr import ONNXPlateRecognizer
+import tempfile
 
 try:
     from skimage.segmentation import clear_border
@@ -436,13 +438,67 @@ class TrOCRLargeWrapper:
         generated_text = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
         return generated_text 
 
+class FastPlateWrapper:
+    """Wrapper class for FastPlate OCR implementation"""
+    def __init__(self, model_name: str = 'argentinian-plates-cnn-model'):
+        print("Initializing FastPlate OCR...")
+        try:
+            self.model = ONNXPlateRecognizer(model_name)
+            print("FastPlate OCR initialized successfully")
+        except Exception as e:
+            print(f"Error initializing FastPlate OCR: {str(e)}")
+            raise
+
+    def extract_text(self, image: np.ndarray) -> List[Tuple[str, float]]:
+        """
+        Extract text from an image using FastPlate OCR.
+        
+        Args:
+            image: numpy array of the image
+            
+        Returns:
+            List of tuples containing (text, confidence_score)
+        """
+        try:
+            print("Starting FastPlate text detection...")
+            print(f"Input image shape: {image.shape}")
+            
+            # Save image temporarily since FastPlate requires a file path
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=True) as temp_file:
+                cv2.imwrite(temp_file.name, image)
+                
+                # Run OCR
+                print("Running OCR...")
+                predictions = self.model.run(temp_file.name)
+                
+                # Process results
+                results = []
+                if predictions:
+                    # FastPlate doesn't provide confidence scores, so we'll use 1.0
+                    # Take first prediction if it's a list
+                    text = predictions[0] if isinstance(predictions, list) else str(predictions)
+                    text = text.strip().upper()
+                    if text:
+                        results.append((text, 1.0))
+                        print(f"Detected: {text} (conf: 1.00)")
+                
+                print(f"FastPlate complete. Found {len(results)} results")
+                return results
+                
+        except Exception as e:
+            print(f"Error in FastPlate text extraction: {str(e)}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            return []
+
 class OCRModelFactory:
     def __init__(self):
         self._model_classes = {
             'easyocr': EasyOCRWrapper,
             'trocr_finetuned': TrOCRFinetunedWrapper,
             'tesseract': TesseractWrapper,
-            'trocr_large': TrOCRLargeWrapper
+            'trocr_large': TrOCRLargeWrapper,
+            'fastplate': FastPlateWrapper
         }
         self._loaded_models = {}  # Cache for loaded models
 
@@ -467,6 +523,8 @@ class OCRModelFactory:
         elif model_name == 'tesseract':
             model = self._model_classes[model_name]()
         elif model_name == 'trocr_large':
+            model = self._model_classes[model_name]()
+        elif model_name == 'fastplate':
             model = self._model_classes[model_name]()
         
         # Cache the model

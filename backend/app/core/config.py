@@ -24,3 +24,11 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 settings = Settings() 
+
+AVAILABLE_OCR_MODELS = [
+    'easyocr',
+    'tesseract',
+    'trocr-finetuned',
+    'trocr-large',
+    'fastplate'  # Add FastPlate to available models
+] 

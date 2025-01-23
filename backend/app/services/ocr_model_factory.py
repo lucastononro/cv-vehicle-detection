@@ -4,6 +4,7 @@ from .models.ocr_model import (
     TesseractWrapper, 
     TrOCRFinetunedWrapper,
     TrOCRLargeWrapper,
+    FastPlateWrapper,
     UnifiedOCRModel
 )
 from ..core.config import AVAILABLE_OCR_MODELS
@@ -14,7 +15,8 @@ class OCRModelFactory:
             'tesseract': TesseractWrapper,
             'easyocr': EasyOCRWrapper,
             'trocr-finetuned': TrOCRFinetunedWrapper,
-            'trocr-large': TrOCRLargeWrapper
+            'trocr-large': TrOCRLargeWrapper,
+            'fastplate': FastPlateWrapper
         }
         self._loaded_models: Dict[str, UnifiedOCRModel] = {}
 
