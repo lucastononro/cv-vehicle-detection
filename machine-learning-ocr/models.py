@@ -12,6 +12,7 @@ from torch.utils.data import Dataset
 import pandas as pd
 from typing import Dict, List, Tuple, Optional
 from postprocessor import LicensePlatePostProcessor
+from fast_plate_ocr import ONNXPlateRecognizer
 
 class CharacterSimilarity:
     """Character similarity mappings for OCR correction"""
@@ -117,6 +118,7 @@ class TrOCRFineTunedWrapper:
         # Decode
         generated_text = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
         return generated_text.strip().upper()
+
         
     def __call__(self, image_path: str) -> str:
         """Run OCR on an image."""
@@ -343,6 +345,58 @@ class TrOCRRawLargeWrapper:
             
         except Exception as e:
             print(f"Error processing image: {str(e)}")
+
+
+class FastPlateWrapper:
+    """Wrapper for FastPlate OCR"""
+    def __init__(self, model_name: str = 'argentinian-plates-cnn-model', use_postprocessing: bool = True):
+        """
+        Initialize FastPlate OCR wrapper.
+        Args:
+            model_name: Name of the model to use
+            use_postprocessing: Whether to use license plate post-processing
+        """
+        print(f"Loading FastPlate OCR with model: {model_name}...")
+        self.model = ONNXPlateRecognizer(model_name)
+        self.post_processor = LicensePlatePostProcessor() if use_postprocessing else None
+        print("FastPlate OCR initialized successfully!")
+
+    def __call__(self, image_path: str) -> str:
+        """Run OCR on an image."""
+        try:
+            print(f"\nProcessing image with FastPlate: {image_path}")
+            
+            # Load and verify image
+            if not os.path.exists(image_path):
+                raise ValueError(f"Image file not found: {image_path}")
+            
+            # Run OCR
+            print("Running OCR...")
+            predictions = self.model.run(image_path)
+            
+            # Handle the list of predictions
+            if not predictions:
+                return ""
+                
+            # Take the first prediction or join them
+            text = predictions[0] if isinstance(predictions, list) else str(predictions)
+            text = text.strip().upper()
+            print(f"Raw FastPlate Result: {text}")
+            
+            # Post-process if enabled
+            if self.post_processor:
+                processed = self.post_processor.process(text)
+                if processed:
+                    print(f"Post-processed Result: {processed}")
+                    return processed
+                else:
+                    print("Post-processing failed, returning raw result")
+            
+            return text
+            
+        except Exception as e:
+            print(f"Error processing image: {str(e)}")
+            print("Full predictions:", self.model.run(image_path))  # Debug print
             import traceback
             traceback.print_exc()
             return "" 

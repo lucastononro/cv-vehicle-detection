@@ -1,0 +1,28 @@
+Results Summary:
+==================================================
+
+
+EasyOCR:
+Accuracy: 0.00%
+Correct: 0/0
+
+TrOCR Fine-Tuned:
+Accuracy: 0.00%
+Correct: 0/0
+
+TrOCR Raw Large:
+Accuracy: 0.00%
+Correct: 0/0
+
+Tesseract:
+Accuracy: 0.00%
+Correct: 0/0
+
+FastPlate:
+Accuracy: 0.00%
+Correct: 0/0
+
+Detailed Results:
+Empty DataFrame
+Columns: []
+Index: []

@@ -68,3 +68,4 @@ machine-learning-yolo/src/data/*
 machine-learning-yolo/src/models/*
 
 yolo-env/*
+ocr-env/*

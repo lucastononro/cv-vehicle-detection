@@ -1,4 +1,4 @@
-numpy>=1.19.0
+numpy>=1.21.0
 opencv-python>=4.5.0
 Pillow>=8.0.0
 torch==2.0.1
@@ -11,3 +11,4 @@ easyocr>=1.6.0
 tqdm>=4.65.0
 pandas>=1.3.0
 pytesseract>=0.3.8
+fast-plate-ocr

@@ -7,7 +7,13 @@ import pandas as pd
 from tqdm import tqdm
 
 from preprocessor import OCRPreprocessor
-from models import EasyOCRWrapper, TrOCRFineTunedWrapper, TesseractWrapper, TrOCRRawLargeWrapper
+from models import (
+    EasyOCRWrapper, 
+    TrOCRFineTunedWrapper, 
+    TesseractWrapper, 
+    TrOCRRawLargeWrapper,
+    FastPlateWrapper
+)
 
 class OCRModelTester:
     def __init__(self, image_dir: str):
@@ -32,6 +38,10 @@ class OCRModelTester:
         # Initialize Tesseract
         print("Initializing Tesseract...")
         self.tesseract_reader = TesseractWrapper()
+        
+        # Initialize FastPlate
+        print("Initializing FastPlate...")
+        self.fastplate_reader = FastPlateWrapper()
 
     def load_images(self) -> Dict[str, np.ndarray]:
         images = {}
@@ -108,6 +118,22 @@ class OCRModelTester:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
 
+    def process_with_fastplate(self, image: np.ndarray) -> str:
+        processed = self.preprocessor.preprocess(image)
+        
+        # Save the processed image temporarily
+        temp_path = os.path.join(self.preprocessor.debug_output_dir, 'temp_fastplate.png')
+        os.makedirs(self.preprocessor.debug_output_dir, exist_ok=True)
+        cv2.imwrite(temp_path, processed)
+        
+        try:
+            result = self.fastplate_reader(temp_path)
+            return result
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
     def run_tests(self):
         images = self.load_images()
         results = {
@@ -115,6 +141,7 @@ class OCRModelTester:
             'TrOCR Fine-Tuned': {},
             'TrOCR Raw Large': {},
             'Tesseract': {},
+            'FastPlate': {},
         }
 
         print("\nTesting OCR models...")
@@ -134,6 +161,10 @@ class OCRModelTester:
             # Test Tesseract
             tesseract_result = self.process_with_tesseract(image)
             results['Tesseract'][ground_truth] = tesseract_result
+            
+            # Test FastPlate
+            fastplate_result = self.process_with_fastplate(image)
+            results['FastPlate'][ground_truth] = fastplate_result
 
         self.results = results
         return results

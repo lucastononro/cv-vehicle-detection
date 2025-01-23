@@ -1,0 +1,39 @@
+Results Summary:
+==================================================
+
+
+EasyOCR:
+Accuracy: 0.00%
+Correct: 0/13
+
+TrOCR Fine-Tuned:
+Accuracy: 0.00%
+Correct: 0/13
+
+TrOCR Raw Large:
+Accuracy: 0.00%
+Correct: 0/13
+
+Tesseract:
+Accuracy: 0.00%
+Correct: 0/13
+
+FastPlate:
+Accuracy: 0.00%
+Correct: 0/13
+
+Detailed Results:
+   Ground Truth EasyOCR TrOCR Fine-Tuned TrOCR Raw Large Tesseract FastPlate
+0       EWU4H33                                           PEWUGHSS          
+1       ISB6348                                                 PA          
+2       FWS9B78                                                             
+3       IPR5A10                                                  L          
+4       ISB6J48                                                  P          
+5       IMU1C50                                                  E          
+6       ASF9648                                                             
+7       FWN5J43                                                 SE          
+8       GHH278D                                                             
+9       PHE7F79                                                  B          
+10      FOM3E02                                                             
+11      FQX1741                                                             
+12      EPQ1B40                                                H24          

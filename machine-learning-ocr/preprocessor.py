@@ -58,6 +58,7 @@ class OCRPreprocessor:
         return deskewed
 
     def preprocess(self, image: np.ndarray, verbose: bool = False) -> np.ndarray:
+        return image
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         if verbose:
             self.save_debug_image(image, "00_original", timestamp)
