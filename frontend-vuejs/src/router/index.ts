@@ -4,6 +4,7 @@ import VideoSelectionView from '@/views/VideoSelectionView.vue'
 import ImageSelectionView from '@/views/ImageSelectionView.vue'
 import VideoView from '@/views/VideoView.vue'
 import ImageView from '@/views/ImageView.vue'
+import LabelOCRGenerationView from '@/views/LabelOCRGenerationView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -32,7 +33,12 @@ const router = createRouter({
       path: '/image/:filename',
       name: 'image-detail',
       component: ImageView,
-    }
+    },
+    {
+      path: '/label-ocr',
+      name: 'label-ocr',
+      component: LabelOCRGenerationView,
+    },
   ],
 })
 

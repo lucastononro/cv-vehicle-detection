@@ -26,6 +26,16 @@ const handleUploadComplete = () => {
         <p>Upload and process images for vehicle and license plate detection</p>
       </div>
     </div>
+    
+    <div class="card-grid">
+      <RouterLink to="/label-ocr" class="card">
+        <div class="card-content">
+          <div class="icon">🏷️</div>
+          <h2>Label OCR Generation</h2>
+          <p>Generate automatic labels for OCR using big guns</p>
+        </div>
+      </RouterLink>
+    </div>
   </div>
 </template>
 
@@ -76,5 +86,44 @@ h2 {
 p {
   color: #666;
   line-height: 1.5;
+}
+
+.card {
+  background: var(--surface-color);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid var(--border-color);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-icon {
+  font-size: 2.5rem;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+.card h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.card p {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  padding: 2rem;
 }
 </style>
