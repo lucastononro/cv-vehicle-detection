@@ -31,13 +31,12 @@ def get_model_path(model_name):
 def setup_training_device():
     """Configure the training device and optimize for Apple Silicon."""
     if platform.processor() == 'arm':
-        # Enable Metal performance acceleration for M-series chips
-        torch.backends.mps.enable = True
-        # Set memory format for better performance
+        # For M-series chips, default to CPU for now due to MPS limitations
+        device = "cpu"
+        # Still enable some optimizations
         torch.set_float32_matmul_precision('high')
-        device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     else:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = "cuda" if torch.cuda.is_available() else "cpu"
     return device
 
 def on_train_epoch_end(trainer):
@@ -96,6 +95,10 @@ def train_yolo(
     """
     if device is None:
         device = setup_training_device()
+    
+    # Reduce batch size if using CPU
+    if device == "cpu":
+        batch_size = min(16, batch_size)  # Reduce batch size for CPU training
     
     # Get the full model path
     model_path = get_model_path(model_name)
