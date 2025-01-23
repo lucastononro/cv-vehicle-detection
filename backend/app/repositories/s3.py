@@ -15,7 +15,8 @@ class S3Repository:
         self.buckets = {
             "videos": "videos",
             "images": "images",
-            "thumbnails": "thumbnails"
+            "thumbnails": "thumbnails",
+            "labels": "labels"  # New bucket for OCR labels
         }
         self._ensure_buckets_exist()
     

@@ -507,9 +507,28 @@ class GPT4VisionWrapper:
         print("Initializing GPT-4 Vision OCR...")
         try:
             api_key = os.environ.get('OPENAI_API_KEY')
-            print(f"API Key: {api_key}")
             self.client = OpenAI(api_key=api_key)
-            self.prompt = "What license plate characters/number do you see in this image? Please respond with ONLY the license plate number, no additional text. Do not invent information, return <FAILED> if you cant see the license plate or are not sure. Formats in Brazil: LLLDDDD or LLLDLDD - where L is a letter and D is a number - if the image is incomplete bring the digits you can see"
+            self.prompt = """
+                <goal>
+                Write down what license plate characters/number do you see in this image like an OCR system would do
+                </goal>
+
+                <rules>
+                Please respond with ONLY the license plate number, no additional text.
+                Do not invent information, return <FAILED> if the image seems not to have characters
+                Pay extra attention to characters like M, W, 8, B, E, F and other that can get easy mistaken depending on position/orientation
+                </rule>
+
+                <formatting>
+                Formats in Brazil: LLLDDDD or LLLDLDD - where L is a letter and D is a number - if the image is incomplete bring the digits you can see
+                Answer in the following format:
+                "LLLDDDD<Confidence%>"
+                or
+                "LLLDLDD<Confidence%>"
+                Simply put do not use quotes and only predict letters and digits, and for Confidence answer in a percentage number of how sure you are about the detection
+                It should always have 7 characters (LLLDLDD or LLLDDDD) at most
+                </formatting>
+                """
             print("GPT-4 Vision initialized successfully!")
         except Exception as e:
             print(f"Error initializing GPT-4 Vision: {str(e)}")
@@ -545,7 +564,7 @@ class GPT4VisionWrapper:
                 # Run inference
                 print("Running GPT-4 Vision inference...")
                 response = self.client.chat.completions.create(
-                    model="gpt-4o",
+                    model="gpt-4o-mini",
                     messages=[
                         {
                             "role": "user",

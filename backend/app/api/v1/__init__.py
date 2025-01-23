@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .endpoints import health, videos, images
+from .endpoints import health, videos, images, labelling
 
 v1_router = APIRouter(prefix="/v1")
 
@@ -7,3 +7,4 @@ v1_router = APIRouter(prefix="/v1")
 v1_router.include_router(health.router, tags=["health"])
 v1_router.include_router(videos.router, prefix="/videos", tags=["videos"]) 
 v1_router.include_router(images.router, prefix="/images", tags=["images"])
+v1_router.include_router(labelling.router, prefix="/labelling", tags=["labelling"])

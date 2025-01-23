@@ -5,6 +5,7 @@ import ImageSelectionView from '@/views/ImageSelectionView.vue'
 import VideoView from '@/views/VideoView.vue'
 import ImageView from '@/views/ImageView.vue'
 import LabelOCRGenerationView from '@/views/LabelOCRGenerationView.vue'
+import LabelOCRView from '@/views/LabelOCRView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -38,6 +39,11 @@ const router = createRouter({
       path: '/label-ocr',
       name: 'label-ocr',
       component: LabelOCRGenerationView,
+    },
+    {
+      path: '/label-ocr/:filename',
+      name: 'label-ocr-detail',
+      component: LabelOCRView,
     },
   ],
 })
