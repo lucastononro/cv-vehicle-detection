@@ -69,3 +69,4 @@ machine-learning-yolo/src/models/*
 
 yolo-env/*
 ocr-env/*
+backend/.env
