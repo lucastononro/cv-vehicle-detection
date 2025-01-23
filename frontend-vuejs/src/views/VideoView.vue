@@ -14,6 +14,7 @@ const inferenceUrl = ref<string>('');
 const availableModels = ref<string[]>([]);
 const selectedModel = ref<string>('yolo11n.pt');
 const useOcr = ref(true);
+const selectedOcrModel = ref<string>('tesseract');
 
 const loadAvailableModels = async () => {
   try {
@@ -78,7 +79,7 @@ const startInference = async () => {
     }
     
     console.log('Starting inference stream...');
-    inferenceUrl.value = `${videoService.getVideoInferenceStreamUrl(videoName, selectedModel.value)}&use_ocr=${useOcr.value}`;
+    inferenceUrl.value = `${videoService.getVideoInferenceStreamUrl(videoName, selectedModel.value)}&use_ocr=${useOcr.value}&ocr_model=${selectedOcrModel.value}`;
     console.log('Setting stream source to:', inferenceUrl.value);
     
   } catch (error) {
@@ -173,6 +174,21 @@ onUnmounted(() => {
                 <span class="toggle-text">Enable OCR</span>
               </label>
               <span class="toggle-description">Detect and read license plate text</span>
+              
+              <div v-if="useOcr" class="ocr-model-selection">
+                <label for="ocr-model-select">OCR Model:</label>
+                <select 
+                  id="ocr-model-select" 
+                  v-model="selectedOcrModel"
+                  :disabled="isProcessing"
+                  class="model-dropdown"
+                >
+                  <option value="tesseract">Tesseract</option>
+                  <option value="easyocr">EasyOCR</option>
+                  <option value="trocr-finetuned">TrOCR Finetuned</option>
+                  <option value="trocr-large">TrOCR Large</option>
+                </select>
+              </div>
             </div>
           </div>
           <button 
@@ -445,6 +461,19 @@ onUnmounted(() => {
 
 .loading-overlay svg {
   font-size: 2rem;
+}
+
+.ocr-model-selection {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ocr-model-selection label {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 @media (max-width: 1200px) {

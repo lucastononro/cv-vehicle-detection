@@ -68,7 +68,11 @@ export const videoService = {
 
   getVideoInferenceStreamUrl(videoName: string, modelName?: string) {
     const baseUrl = `${API_URL}/videos/inference/${encodeURIComponent(videoName)}/stream`;
-    const url = modelName ? `${baseUrl}?model_name=${encodeURIComponent(modelName)}` : baseUrl;
+    const params = new URLSearchParams();
+    if (modelName) {
+      params.append('model_name', modelName);
+    }
+    const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
     console.log('Generated inference URL:', url);
     return url;
   }
@@ -87,11 +91,17 @@ export const imageService = {
     return response.data;
   },
 
-  async processImage(imageName: string, useOcr: boolean = true, modelName?: string): Promise<ImageInferenceResult> {
+  async processImage(
+    imageName: string, 
+    useOcr: boolean = true, 
+    modelName?: string,
+    ocrModel: string = 'easyocr'
+  ): Promise<ImageInferenceResult> {
     const response = await api.get(`/images/inference/${imageName}`, {
       params: { 
         use_ocr: useOcr,
-        model_name: modelName
+        model_name: modelName,
+        ocr_model: ocrModel
       }
     });
     return response.data;
@@ -100,11 +110,13 @@ export const imageService = {
   async processPipeline(
     imageName: string, 
     steps: PipelineStep[],
-    useOcr: boolean = true
+    useOcr: boolean = true,
+    ocrModel: string = 'easyocr'
   ): Promise<ImageInferenceResult> {
     const response = await api.get(`/images/pipeline/${imageName}`, {
       params: { 
         use_ocr: useOcr,
+        ocr_model: ocrModel,
         pipeline: steps
           .filter(step => step.enabled)
           .map(step => step.model)

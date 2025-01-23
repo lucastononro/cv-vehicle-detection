@@ -52,17 +52,17 @@ class InferenceService:
             return self.model_factory.load_model('yolo', str(model_path), model_name)
     
     def get_ocr_model(self, model_name: Optional[str] = None) -> UnifiedOCRModel:
-        """Get a UnifiedOCRModel by name, defaults to tesseract if none specified"""
-        model_name = model_name or 'tesseract'  # Default to tesseract
+        """Get a UnifiedOCRModel by name, defaults to easyocr if none specified"""
+        model_name = model_name or 'easyocr'  # Default to easyocr
         if not self.ocr_model or self.ocr_model.model_name != model_name:
             self.ocr_model = UnifiedOCRModel(model_name)
         return self.ocr_model
 
-    def process_image(self, image_array: np.ndarray, model_name: Optional[str] = None, use_ocr: bool = True) -> Dict:
+    def process_image(self, image_array: np.ndarray, model_name: Optional[str] = None, use_ocr: bool = True, ocr_model: Optional[str] = 'easyocr') -> Dict:
         """Process a single image and return detections"""
         try:
             print("\n=== Starting Image Processing ===")
-            print(f"Model: {model_name}, OCR Enabled: {use_ocr}")
+            print(f"Model: {model_name}, OCR Enabled: {use_ocr}, OCR Model: {ocr_model}")
             
             # First get vehicle/license plate detections using YOLO
             print("Getting YOLO model...")
@@ -144,8 +144,8 @@ class InferenceService:
                             continue
 
                         print(f"Cropped region shape: {cropped.shape}")
-                        print("Getting OCR model...")
-                        ocr_model = self.get_ocr_model()
+                        print(f"Getting OCR model: {ocr_model}")
+                        ocr_model = self.get_ocr_model(ocr_model)
                         print(f"Using OCR model: {ocr_model.model_name}")
                         
                         print("Starting OCR text extraction...")

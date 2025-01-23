@@ -166,7 +166,8 @@ async def stream_inference(
     request: Request, 
     background_tasks: BackgroundTasks, 
     model_name: Optional[str] = None,
-    use_ocr: bool = True
+    use_ocr: bool = True,
+    ocr_model: Optional[str] = 'easyocr'
 ):
     """Stream video with real-time inference and OCR (enabled by default)"""
     try:
@@ -191,8 +192,7 @@ async def stream_inference(
                                 break
                                 
                             # Process frame with model and OCR if enabled
-                            # Always draw annotations (bounding boxes) regardless of OCR setting
-                            result = inference_service.process_image(frame, model_name, use_ocr=use_ocr)
+                            result = inference_service.process_image(frame, model_name, use_ocr=use_ocr, ocr_model=ocr_model)
                             
                             # Get the processed frame with annotations
                             processed_frame = result.get('processed_frame', frame)

@@ -162,7 +162,8 @@ async def list_images():
 async def get_inference(
     image_name: str,
     model_name: Optional[str] = None,
-    use_ocr: bool = True
+    use_ocr: bool = True,
+    ocr_model: Optional[str] = 'easyocr'
 ):
     """Get inference results for an image"""
     try:
@@ -179,7 +180,7 @@ async def get_inference(
             raise HTTPException(status_code=400, detail="Invalid image format")
         
         # Process image
-        result = inference_service.process_image(image, model_name, use_ocr=use_ocr)
+        result = inference_service.process_image(image, model_name, use_ocr=use_ocr, ocr_model=ocr_model)
         
         # Convert processed image to base64
         _, buffer = cv2.imencode('.jpg', result['processed_frame'])

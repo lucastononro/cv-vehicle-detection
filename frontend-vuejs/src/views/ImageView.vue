@@ -101,6 +101,22 @@
                 <span class="toggle-text">Enable OCR</span>
                 <span class="toggle-description">Extract text from license plates</span>
               </label>
+              
+              <!-- Add OCR model selection -->
+              <div v-if="useOcr" class="ocr-model-selection">
+                <label for="ocr-model-select">OCR Model:</label>
+                <select 
+                  id="ocr-model-select" 
+                  v-model="selectedOcrModel"
+                  :disabled="isProcessing"
+                  class="model-dropdown"
+                >
+                  <option value="tesseract">Tesseract</option>
+                  <option value="easyocr">EasyOCR</option>
+                  <option value="trocr-finetuned">TrOCR Finetuned</option>
+                  <option value="trocr-large">TrOCR Large</option>
+                </select>
+              </div>
             </div>
           </div>
           
@@ -135,6 +151,7 @@ const selectedModel = ref<string>('yolo11n');
 const useOcr = ref<boolean>(true);
 const isPipelineMode = ref<boolean>(false);
 const isLoading = ref(false);
+const selectedOcrModel = ref<string>('tesseract');
 
 const pipelineSteps = ref<PipelineStep[]>([
   { model: 'yolo11n', enabled: true },
@@ -166,12 +183,14 @@ const startInference = async () => {
       ? await imageService.processPipeline(
           imageName,
           pipelineSteps.value,
-          useOcr.value
+          useOcr.value,
+          selectedOcrModel.value
         )
       : await imageService.processImage(
           imageName,
           useOcr.value,
-          selectedModel.value
+          selectedModel.value,
+          selectedOcrModel.value
         );
     
     processedImage.value = result.processed_image;
@@ -535,5 +554,18 @@ onMounted(async () => {
 
 .pipeline-step .toggle-label:hover {
   border-color: var(--primary-color);
+}
+
+.ocr-model-selection {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ocr-model-selection label {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 </style> 
