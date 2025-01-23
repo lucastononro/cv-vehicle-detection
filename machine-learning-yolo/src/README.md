@@ -46,3 +46,16 @@ Contains:
 - Model evaluation tools
 - Performance metrics calculation
 - Visualization utilities
+
+
+## Usage
+
+Basic training command:
+```bash
+python src/train.py \
+    --data src/data/vehicle-detection-639on/data.yaml \
+    --model yolo11n.pt \
+    --epochs 300 \
+    --batch-size 64 \
+    --learning-rate 0.001
+```
