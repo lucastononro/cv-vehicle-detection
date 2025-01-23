@@ -79,7 +79,12 @@ const startInference = async () => {
     }
     
     console.log('Starting inference stream...');
-    inferenceUrl.value = `${videoService.getVideoInferenceStreamUrl(videoName, selectedModel.value)}&use_ocr=${useOcr.value}&ocr_model=${selectedOcrModel.value}`;
+    inferenceUrl.value = videoService.getVideoInferenceStreamUrl(
+      videoName, 
+      selectedModel.value,
+      useOcr.value,
+      selectedOcrModel.value
+    );
     console.log('Setting stream source to:', inferenceUrl.value);
     
   } catch (error) {

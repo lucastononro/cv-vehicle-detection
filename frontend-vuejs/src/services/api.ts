@@ -66,15 +66,15 @@ export const videoService = {
     return response.data;
   },
 
-  getVideoInferenceStreamUrl(videoName: string, modelName?: string) {
+  getVideoInferenceStreamUrl(videoName: string, modelName?: string, useOcr: boolean = true, ocrModel: string = 'easyocr') {
     const baseUrl = `${API_URL}/videos/inference/${encodeURIComponent(videoName)}/stream`;
     const params = new URLSearchParams();
     if (modelName) {
       params.append('model_name', modelName);
     }
-    const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
-    console.log('Generated inference URL:', url);
-    return url;
+    params.append('use_ocr', useOcr.toString());
+    params.append('ocr_model', ocrModel);
+    return `${baseUrl}?${params.toString()}`;
   }
 };
 

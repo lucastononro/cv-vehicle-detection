@@ -55,6 +55,7 @@ class InferenceService:
         """Get a UnifiedOCRModel by name, defaults to easyocr if none specified"""
         model_name = model_name or 'easyocr'  # Default to easyocr
         if not self.ocr_model or self.ocr_model.model_name != model_name:
+            print(f"Creating new OCR model instance for: {model_name}")
             self.ocr_model = UnifiedOCRModel(model_name)
         return self.ocr_model
 
@@ -94,6 +95,13 @@ class InferenceService:
             
             print(f"\nFound {len(detections)} total detections")
 
+            # Get OCR model once if needed
+            ocr_model_instance = None
+            if use_ocr:
+                print(f"Initializing OCR model: {ocr_model}")
+                ocr_model_instance = self.get_ocr_model(ocr_model)
+                print(f"Using OCR model: {ocr_model_instance.model_name}")
+
             for idx, detection in enumerate(detections):
                 if not isinstance(detection, dict):
                     print(f"Skipping invalid detection {idx}")
@@ -129,7 +137,7 @@ class InferenceService:
                           class_font_scale, (0, 0, 0), class_thickness)
 
                 # Add OCR if enabled and this is a license plate
-                if use_ocr and any(plate_term in class_name for plate_term in ["license", "plate", "licence", "number"]):
+                if use_ocr and ocr_model_instance and any(plate_term in class_name for plate_term in ["license", "plate", "licence", "number"]):
                     print("\n=== Starting OCR Processing ===")
                     try:
                         # Ensure valid crop region
@@ -144,12 +152,8 @@ class InferenceService:
                             continue
 
                         print(f"Cropped region shape: {cropped.shape}")
-                        print(f"Getting OCR model: {ocr_model}")
-                        ocr_model = self.get_ocr_model(ocr_model)
-                        print(f"Using OCR model: {ocr_model.model_name}")
-                        
                         print("Starting OCR text extraction...")
-                        text, confidence = ocr_model.read_text_from_region(cropped, [0, 0, x2-x1, y2-y1])
+                        text, confidence = ocr_model_instance.read_text_from_region(cropped, [0, 0, x2-x1, y2-y1])
                         print("OCR text extraction complete")
 
                         if text:
@@ -196,7 +200,7 @@ class InferenceService:
             print(f"Traceback: {traceback.format_exc()}")
             return {"model_name": model_name, "detections": [], "processed_frame": image_array.copy()}
     
-    def process_video_batch(self, frames: List[np.ndarray], batch_size: int = 16, use_ocr: bool = True) -> Tuple[List[Dict], List[np.ndarray]]:
+    def process_video_batch(self, frames: List[np.ndarray], batch_size: int = 16, use_ocr: bool = True, ocr_model: Optional[str] = 'easyocr') -> Tuple[List[Dict], List[np.ndarray]]:
         """Process a batch of video frames with optimized batch inference"""
         # Get detections from YOLO
         detections, processed_frames = self.default_model.predict(frames, batch_size=batch_size, stream=False, draw_annotations=False)
@@ -211,6 +215,11 @@ class InferenceService:
         if use_ocr:
             print(f"\n=== OCR Batch Processing Start ===")
             print(f"Processing batch of {len(frames)} frames")
+            
+            # Get OCR model once for the batch
+            print(f"Initializing OCR model: {ocr_model}")
+            ocr_model_instance = self.get_ocr_model(ocr_model)
+            print(f"Using OCR model: {ocr_model_instance.model_name}")
             
             # Process each frame's detections with OCR
             for frame_idx, (frame_dets, frame) in enumerate(zip(detections, frames)):
@@ -256,8 +265,7 @@ class InferenceService:
                         print(f"Cropped region dimensions: {crop_width}x{crop_height}")
                         
                         # Read text from the license plate region
-                        ocr_model = self.get_ocr_model()  # Use default OCR model
-                        text, confidence = ocr_model.read_text_from_region(frame[y1:y2, x1:x2], [0, 0, x2-x1, y2-y1])
+                        text, confidence = ocr_model_instance.read_text_from_region(frame[y1:y2, x1:x2], [0, 0, x2-x1, y2-y1])
                         
                         if text:
                             print(f"✓ OCR Success - Text: {text}, Confidence: {confidence:.2f}")
