@@ -349,7 +349,7 @@ class TrOCRRawLargeWrapper:
 
 class FastPlateWrapper:
     """Wrapper for FastPlate OCR"""
-    def __init__(self, model_name: str = 'argentinian-plates-cnn-model', use_postprocessing: bool = True):
+    def __init__(self, model_name: str = 'european-plates-mobile-vit-v2-model', use_postprocessing: bool = True):
         """
         Initialize FastPlate OCR wrapper.
         Args:
