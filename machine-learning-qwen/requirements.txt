@@ -1,0 +1,16 @@
+# Python version requirement
+--index-url https://download.pytorch.org/whl/cu121
+torch==2.4.0
+torchvision==0.19.0
+# torchaudio==2.4.0
+xformers==0.0.27.post2
+
+git+https://github.com/huggingface/transformers@21fac7abba2a37fae86106f87fcf9974fd1e3830
+accelerate
+qwen-vl-utils
+
+# Optional dependencies
+av
+
+# Uncomment the following line if you need flash-attn
+# flash-attn==2.6.1
